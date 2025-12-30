@@ -7,10 +7,5 @@
             "source": "/api/(.*)",
             "destination": "/api/server"
         }
-    ],
-    "functions": {
-        "api/server.js": {
-            "runtime": "nodejs20.x"
-        }
-    }
+    ]
 }
