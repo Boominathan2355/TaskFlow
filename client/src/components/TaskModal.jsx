@@ -29,6 +29,8 @@ const PRIORITY_VARIANTS = {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import { config as appConfig } from '../config';
+
 const TaskModal = ({ task, onClose, onUpdate, project }) => {
     const [currentTask, setCurrentTask] = useState(task);
     const [comment, setComment] = useState('');
@@ -40,8 +42,8 @@ const TaskModal = ({ task, onClose, onUpdate, project }) => {
     const [commentTab, setCommentTab] = useState('write'); // write | preview
     const [users, setUsers] = useState([]);
     const { user } = useAuth();
-    // eslint-disable-next-line no-undef
-    const API_URL = 'http://localhost:5000'; // Fallback
+
+    const API_URL = appConfig.API_URL;
 
     useEffect(() => {
         setCurrentTask(task);

@@ -16,14 +16,16 @@ const COLORS = [
     '#6366F1', // Indigo
 ];
 
+import { config as appConfig } from '../config';
+
 const CreateProjectModal = ({ isOpen, onClose, onCreate }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [color, setColor] = useState(COLORS[0]);
     const [loading, setLoading] = useState(false);
     const [descTab, setDescTab] = useState('write'); // write | preview
-    // eslint-disable-next-line no-undef
-    const API_URL = 'http://localhost:5000'; // Fallback
+
+    const API_URL = appConfig.API_URL;
 
     if (!isOpen) return null;
 

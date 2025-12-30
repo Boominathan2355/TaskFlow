@@ -6,6 +6,8 @@ import Button from './ui/Button';
 import Input from './ui/Input';
 import { uploadAPI, userAPI } from '../services';
 
+import { config as appConfig } from '../config';
+
 const CreateTaskModal = ({ isOpen, onClose, onCreate, project, initialStage }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -18,8 +20,8 @@ const CreateTaskModal = ({ isOpen, onClose, onCreate, project, initialStage }) =
     const [users, setUsers] = useState([]);
     const [error, setError] = useState('');
     const [descTab, setDescTab] = useState('write'); // write | preview
-    // eslint-disable-next-line no-undef
-    const API_URL = 'http://localhost:5000'; // Fallback
+
+    const API_URL = appConfig.API_URL;
 
     // Shared Markdown Components Config
     const markdownComponents = {
