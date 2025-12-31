@@ -5,9 +5,9 @@ const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
 
 // Helper to create notification
-const createNotification = async (recipient, type, title, message, relatedTask, relatedProject) => {
+const createNotification = async (io, recipient, type, title, message, relatedTask, relatedProject) => {
     try {
-        await Notification.create({
+        const notification = await Notification.create({
             recipient,
             type,
             title,
@@ -15,15 +15,20 @@ const createNotification = async (recipient, type, title, message, relatedTask, 
             relatedTask,
             relatedProject
         });
+
+        // Emit real-time notification
+        if (io) {
+            io.to(`user_${recipient}`).emit('new_notification', notification);
+        }
     } catch (error) {
         console.error('Error creating notification:', error);
     }
 };
 
 // Helper to create activity log
-const createActivityLog = async (project, task, user, action, description, metadata = {}) => {
+const createActivityLog = async (io, project, task, user, action, description, metadata = {}) => {
     try {
-        await ActivityLog.create({
+        const log = await ActivityLog.create({
             project,
             task,
             user,
@@ -31,6 +36,11 @@ const createActivityLog = async (project, task, user, action, description, metad
             description,
             metadata
         });
+
+        // Emit real-time activity
+        if (io) {
+            io.to(project.toString()).emit('new_activity', log);
+        }
     } catch (error) {
         console.error('Error creating activity log:', error);
     }
@@ -161,6 +171,7 @@ exports.createTask = async (req, res) => {
 
         // Create activity log
         await createActivityLog(
+            req.app.get('io'),
             projectId,
             task._id,
             req.user._id,
@@ -173,6 +184,7 @@ exports.createTask = async (req, res) => {
             for (const userId of assignedTo) {
                 if (userId !== req.user._id.toString()) {
                     await createNotification(
+                        req.app.get('io'),
                         userId,
                         'task_assigned',
                         'New Task Assigned',
@@ -183,6 +195,10 @@ exports.createTask = async (req, res) => {
                 }
             }
         }
+
+        // Emit real-time event
+        req.app.get('io').to(projectId).emit('task_created', { task, projectId });
+        req.app.get('io').emit('dashboard_update'); // General update for dashboard
 
         res.status(201).json({
             message: 'Task created successfully',
@@ -235,6 +251,7 @@ exports.updateTask = async (req, res) => {
         if (stage && stage !== oldStage) {
             changes.push(`moved from ${oldStage} to ${stage}`);
             await createActivityLog(
+                req.app.get('io'),
                 task.project._id,
                 task._id,
                 req.user._id,
@@ -246,6 +263,7 @@ exports.updateTask = async (req, res) => {
 
         if (changes.length === 0) {
             await createActivityLog(
+                req.app.get('io'),
                 task.project._id,
                 task._id,
                 req.user._id,
@@ -261,6 +279,7 @@ exports.updateTask = async (req, res) => {
                 const assignedUser = await User.findById(userId);
                 if (assignedUser) {
                     await createActivityLog(
+                        req.app.get('io'),
                         task.project._id,
                         task._id,
                         req.user._id,
@@ -271,6 +290,7 @@ exports.updateTask = async (req, res) => {
 
                     if (userId !== req.user._id.toString()) {
                         await createNotification(
+                            req.app.get('io'),
                             userId,
                             'task_assigned',
                             'New Task Assigned',
@@ -282,6 +302,10 @@ exports.updateTask = async (req, res) => {
                 }
             }
         }
+
+        // Emit real-time event
+        req.app.get('io').to(task.project._id.toString()).emit('task_updated', { task, projectId: task.project._id });
+        req.app.get('io').emit('dashboard_update');
 
         res.json({
             message: 'Task updated successfully',
@@ -303,18 +327,21 @@ exports.deleteTask = async (req, res) => {
             return res.status(404).json({ error: 'Task not found' });
         }
 
-        // Check if user has access (Project Owner or Admin role in Project)
+        // Check if user has access (Project Owner, Project Admin, Task Creator, or Global Admin)
         const project = await Project.findById(task.project);
-        const isOwner = project.owner.toString() === req.user._id.toString();
-        const member = project.members.find(m => m.user.toString() === req.user._id.toString());
-        const isAdmin = member && member.role === 'Admin';
+        const isProjectOwner = project.owner.toString() === req.user._id.toString();
+        const projectMember = project.members.find(m => m.user.toString() === req.user._id.toString());
+        const isProjectAdmin = projectMember && projectMember.role === 'Admin';
+        const isTaskCreator = task.createdBy.toString() === req.user._id.toString();
+        const isGlobalAdmin = req.user.role === 'Admin';
 
-        if (!isOwner && !isAdmin) {
-            return res.status(403).json({ error: 'Access denied. Only project admins or the project owner can delete tasks.' });
+        if (!isProjectOwner && !isProjectAdmin && !isTaskCreator && !isGlobalAdmin) {
+            return res.status(403).json({ error: 'Access denied. You do not have permission to delete this task.' });
         }
 
         // Create activity log before deleting
         await createActivityLog(
+            req.app.get('io'),
             task.project,
             task._id,
             req.user._id,
@@ -323,6 +350,10 @@ exports.deleteTask = async (req, res) => {
         );
 
         await Task.findByIdAndDelete(taskId);
+
+        // Emit real-time event
+        req.app.get('io').to(task.project.toString()).emit('task_deleted', { taskId, projectId: task.project });
+        req.app.get('io').emit('dashboard_update');
 
         res.json({ message: 'Task deleted successfully' });
     } catch (error) {
@@ -359,6 +390,7 @@ exports.addComment = async (req, res) => {
 
         // Create activity log
         await createActivityLog(
+            req.app.get('io'),
             task.project,
             task._id,
             req.user._id,
@@ -372,6 +404,7 @@ exports.addComment = async (req, res) => {
 
         for (const userId of notifyUsers) {
             await createNotification(
+                req.app.get('io'),
                 userId,
                 'comment_added',
                 'New Comment',
@@ -384,6 +417,9 @@ exports.addComment = async (req, res) => {
         // Populate fields needed for frontend
         await task.populate('assignedTo', 'name email avatar');
         await task.populate('createdBy', 'name email avatar');
+
+        // Emit real-time comment event
+        req.app.get('io').to(task.project.toString()).emit('task_updated', { task, projectId: task.project });
 
         res.json({
             message: 'Comment added successfully',
@@ -467,6 +503,9 @@ exports.addAttachment = async (req, res) => {
         await task.populate('assignedTo', 'name email avatar');
         await task.populate('createdBy', 'name email avatar');
         await task.populate('comments.author', 'name email avatar');
+
+        // Emit real-time attachment event
+        req.app.get('io').to(task.project.toString()).emit('task_updated', { task, projectId: task.project });
 
         res.json({
             message: 'Attachment added successfully',

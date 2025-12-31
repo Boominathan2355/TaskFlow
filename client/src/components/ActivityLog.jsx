@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { activityAPI } from '../services';
 import Avatar from './ui/Avatar';
 import { format } from 'date-fns';
+import { useSocket } from '../contexts/SocketContext';
 import {
     MessageSquare,
     ArrowRightLeft,
@@ -16,7 +17,7 @@ import {
 const ActivityLog = ({ projectId }) => {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
-    const pollInterval = useRef(null);
+    const socket = useSocket();
 
     const fetchActivity = async (showLoading = true) => {
         if (showLoading) setLoading(true);
@@ -33,17 +34,22 @@ const ActivityLog = ({ projectId }) => {
     useEffect(() => {
         if (projectId) {
             fetchActivity(true);
-
-            // Real-time polling every 10 seconds
-            pollInterval.current = setInterval(() => {
-                fetchActivity(false);
-            }, 10000);
         }
-
-        return () => {
-            if (pollInterval.current) clearInterval(pollInterval.current);
-        };
     }, [projectId]);
+
+    useEffect(() => {
+        if (socket && projectId) {
+            socket.on('new_activity', (log) => {
+                if (log.project === projectId || log.project?._id === projectId) {
+                    setLogs(prev => [log, ...prev]);
+                }
+            });
+
+            return () => {
+                socket.off('new_activity');
+            };
+        }
+    }, [socket, projectId]);
 
     const getActionConfig = (action) => {
         switch (action) {

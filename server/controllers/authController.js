@@ -131,3 +131,114 @@ exports.refreshToken = async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 };
+
+const crypto = require('crypto');
+
+const sendEmail = require('../utils/sendEmail');
+
+// Forgot Password
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Generate token
+        const resetToken = crypto.randomBytes(20).toString('hex');
+
+        // Hash token and save to DB
+        user.resetPasswordToken = crypto
+            .createHash('sha256')
+            .update(resetToken)
+            .digest('hex');
+
+        // Expires in 10 minutes
+        user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+        await user.save();
+
+        const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+
+        const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
+
+        try {
+            await sendEmail({
+                email: user.email,
+                subject: 'Password Reset Request',
+                message,
+                html: `
+                    <h1>You have requested a password reset</h1>
+                    <p>Please click the link below to reset your password:</p>
+                    <a href="${resetUrl}" clicktracking=off>${resetUrl}</a>
+                    <p>If you did not make this request, please ignore the email.</p>
+                `
+            });
+
+            res.status(200).json({ success: true, message: 'Email sent' });
+        } catch (err) {
+            console.error('Email send failed. Fallback to console log.');
+            console.log(`Fallback Password Reset Link: ${resetUrl}`);
+
+            // Return success with warning so user can continue flow using console link
+            return res.status(200).json({
+                success: true,
+                message: 'Email service unavailable. Check server console for reset link.'
+            });
+        }
+
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// Reset Password
+exports.resetPassword = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { password } = req.body;
+
+        // Hash token to compare with DB
+        const resetPasswordToken = crypto
+            .createHash('sha256')
+            .update(token)
+            .digest('hex');
+
+        const user = await User.findOne({
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ error: 'Invalid or expired token' });
+        }
+
+        // Set new password (will be hashed by pre-save hook)
+        user.password = password;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+
+        await user.save();
+
+        const newToken = generateToken(user._id);
+
+        res.json({
+            message: 'Password updated successfully',
+            token: newToken,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                avatar: user.avatar
+            }
+        });
+
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+};

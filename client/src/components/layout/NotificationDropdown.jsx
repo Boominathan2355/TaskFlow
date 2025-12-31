@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { notificationAPI } from '../../services/index';
 import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSocket } from '../../contexts/SocketContext';
+import { Bell } from 'lucide-react';
 
 const NotificationDropdown = () => {
     const [notifications, setNotifications] = useState([]);
@@ -9,16 +11,31 @@ const NotificationDropdown = () => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
     const { user } = useAuth();
+    const socket = useSocket();
 
     useEffect(() => {
         if (user) {
             fetchNotifications();
-
-            // Set up polling for real-time updates
-            const intervalId = setInterval(fetchNotifications, 5000);
-            return () => clearInterval(intervalId);
         }
     }, [user]);
+
+    useEffect(() => {
+        if (socket) {
+            socket.on('new_notification', (notification) => {
+                setNotifications(prev => [notification, ...prev]);
+                setUnreadCount(prev => prev + 1);
+
+                // Optional: Play sound or show toast
+                if (Notification.permission === 'granted') {
+                    new Notification(notification.title, { body: notification.message });
+                }
+            });
+
+            return () => {
+                socket.off('new_notification');
+            };
+        }
+    }, [socket]);
 
     // Close dropdown when clicking outside
     useEffect(() => {

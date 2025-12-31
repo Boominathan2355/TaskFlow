@@ -5,6 +5,8 @@ import Badge from '../components/ui/Badge';
 import Avatar from '../components/ui/Avatar';
 import Input from '../components/ui/Input';
 import CreateUserModal from '../components/CreateUserModal';
+import UserProjectsModal from '../components/UserProjectsModal';
+import { useSocket } from '../contexts/SocketContext';
 import {
     Trash2,
     Shield,
@@ -17,7 +19,8 @@ import {
     Calendar,
     CheckCircle2,
     ShieldAlert,
-    ShieldCheck
+    ShieldCheck,
+    FolderKanban
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -27,7 +30,9 @@ const UserManagement = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState('All');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [selectedUserForProjects, setSelectedUserForProjects] = useState(null);
     const [activeRoleMenu, setActiveRoleMenu] = useState(null);
+    const socket = useSocket();
     const [stats, setStats] = useState({
         total: 0,
         admins: 0,
@@ -38,6 +43,28 @@ const UserManagement = () => {
     useEffect(() => {
         fetchUsers();
     }, []);
+
+    useEffect(() => {
+        if (socket) {
+            socket.on('user_created', ({ user }) => {
+                setUsers(prev => [user, ...prev]);
+            });
+
+            socket.on('user_updated', ({ user }) => {
+                setUsers(prev => prev.map(u => u._id === user._id || u._id === user.id ? { ...u, ...user } : u));
+            });
+
+            socket.on('user_deleted', ({ userId }) => {
+                setUsers(prev => prev.filter(u => u._id !== userId));
+            });
+
+            return () => {
+                socket.off('user_created');
+                socket.off('user_updated');
+                socket.off('user_deleted');
+            };
+        }
+    }, [socket]);
 
     useEffect(() => {
         if (users.length > 0) {
@@ -281,6 +308,18 @@ const UserManagement = () => {
                                                     Role
                                                 </Button>
 
+                                                {user.role !== 'Admin' && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setSelectedUserForProjects(user)}
+                                                        className="h-9 px-3 gap-2 border-border/50 hover:bg-muted/50 text-[11px] font-bold uppercase tracking-wider"
+                                                    >
+                                                        <FolderKanban className="w-3.5 h-3.5" />
+                                                        Projects
+                                                    </Button>
+                                                )}
+
                                                 {activeRoleMenu === user._id && (
                                                     <>
                                                         <div
@@ -332,6 +371,12 @@ const UserManagement = () => {
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onCreate={handleCreateUser}
+            />
+
+            <UserProjectsModal
+                isOpen={!!selectedUserForProjects}
+                onClose={() => setSelectedUserForProjects(null)}
+                user={selectedUserForProjects}
             />
         </div>
     );

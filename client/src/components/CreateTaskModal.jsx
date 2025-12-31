@@ -111,6 +111,21 @@ const CreateTaskModal = ({ isOpen, onClose, onCreate, project, initialStage }) =
             return;
         }
 
+        if (!description.trim()) {
+            setError('Description is required');
+            return;
+        }
+
+        if (!type || type === '') {
+            setError('Task type is required');
+            return;
+        }
+
+        if (!priority || priority === '') {
+            setError('Priority is required');
+            return;
+        }
+
         setLoading(true);
         setError('');
 
@@ -162,8 +177,8 @@ const CreateTaskModal = ({ isOpen, onClose, onCreate, project, initialStage }) =
                             {/* Main Content (Left) */}
                             <div className="lg:col-span-2 space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-foreground/80 uppercase tracking-wider text-[10px]">
-                                        Task Title
+                                    <label className="text-sm font-semibold text-foreground/80 uppercase tracking-wider text-[10px] flex items-center">
+                                        Task Title <span className="text-destructive ml-1">*</span>
                                     </label>
                                     <Input
                                         placeholder="What needs to be done?"
@@ -176,8 +191,8 @@ const CreateTaskModal = ({ isOpen, onClose, onCreate, project, initialStage }) =
 
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-sm font-semibold text-foreground/80 uppercase tracking-wider text-[10px]">
-                                            Description
+                                        <label className="text-sm font-semibold text-foreground/80 uppercase tracking-wider text-[10px] flex items-center">
+                                            Description <span className="text-destructive ml-1">*</span>
                                         </label>
                                         <div className="flex items-center gap-1 bg-muted p-0.5 rounded-md border border-border/50">
                                             <button
@@ -228,7 +243,9 @@ const CreateTaskModal = ({ isOpen, onClose, onCreate, project, initialStage }) =
                             <div className="space-y-6 lg:border-l lg:pl-8 border-border">
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <label className="text-sm font-semibold text-foreground/80 uppercase tracking-wider text-[10px]">Task Type</label>
+                                        <label className="text-sm font-semibold text-foreground/80 uppercase tracking-wider text-[10px] flex items-center">
+                                            Task Type <span className="text-destructive ml-1">*</span>
+                                        </label>
                                         <select
                                             className="w-full h-9 rounded-md border border-input bg-background/50 px-3 py-1 text-sm shadow-sm transition-all focus:ring-1 focus:ring-primary focus:border-primary outline-none"
                                             value={type}
@@ -246,7 +263,9 @@ const CreateTaskModal = ({ isOpen, onClose, onCreate, project, initialStage }) =
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-sm font-semibold text-foreground/80 uppercase tracking-wider text-[10px]">Priority</label>
+                                        <label className="text-sm font-semibold text-foreground/80 uppercase tracking-wider text-[10px] flex items-center">
+                                            Priority <span className="text-destructive ml-1">*</span>
+                                        </label>
                                         <select
                                             className="w-full h-9 rounded-md border border-input bg-background/50 px-3 py-1 text-sm shadow-sm transition-all focus:ring-1 focus:ring-primary focus:border-primary outline-none"
                                             value={priority}

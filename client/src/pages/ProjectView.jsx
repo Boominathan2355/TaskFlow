@@ -12,6 +12,7 @@ import ProjectSettingsModal from '../components/ProjectSettingsModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAuth } from '../contexts/AuthContext';
+import { useSocket } from '../contexts/SocketContext';
 import Button from '../components/ui/Button';
 import { Settings } from 'lucide-react';
 
@@ -35,6 +36,8 @@ const ProjectView = () => {
     const [statusFilter, setStatusFilter] = useState('All');
     const [priorityFilter, setPriorityFilter] = useState('All');
     const [assigneeFilter, setAssigneeFilter] = useState('All');
+
+    const socket = useSocket();
 
     const { user } = useAuth();
     const isAdmin = project?.owner === user?._id ||
@@ -63,6 +66,41 @@ const ProjectView = () => {
             fetchProjectData();
         }
     }, [id]);
+
+    useEffect(() => {
+        if (socket && id) {
+            socket.emit('join_project', id);
+
+            const handleUpdate = () => {
+                const fetchProjectData = async () => {
+                    try {
+                        const [projectRes, tasksRes] = await Promise.all([
+                            projectAPI.getProjectById(id),
+                            taskAPI.getProjectTasks(id)
+                        ]);
+                        setProject(projectRes.data.project);
+                        setTasks(tasksRes.data.tasks);
+                    } catch (error) {
+                        console.error('Error fetching project data:', error);
+                    }
+                };
+                fetchProjectData();
+            };
+
+            socket.on('task_created', handleUpdate);
+            socket.on('task_updated', handleUpdate);
+            socket.on('task_deleted', handleUpdate);
+            socket.on('project_updated', handleUpdate);
+
+            return () => {
+                socket.emit('leave_project', id);
+                socket.off('task_created', handleUpdate);
+                socket.off('task_updated', handleUpdate);
+                socket.off('task_deleted', handleUpdate);
+                socket.off('project_updated', handleUpdate);
+            };
+        }
+    }, [socket, id]);
 
     const handleTaskMove = async (taskId, newStage) => {
         // Optimistic update
@@ -107,15 +145,20 @@ const ProjectView = () => {
     };
 
     const filteredTasks = tasks.filter(task => {
-        const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            task.description?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = (task.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+            (task.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
         const matchesStatus = statusFilter === 'All' || task.stage === statusFilter;
         const matchesPriority = priorityFilter === 'All' || task.priority === priorityFilter;
         const matchesAssignee = assigneeFilter === 'All' ||
             (assigneeFilter === 'Unassigned' && (!task.assignedTo || task.assignedTo.length === 0)) ||
             task.assignedTo?.some(u => u._id === assigneeFilter);
 
-        return matchesSearch && matchesStatus && matchesPriority && matchesAssignee;
+        // Visibility restriction: Show if unassigned, OR if user is an assignee, OR if user is Admin
+        const isVisible = isAdmin ||
+            (!task.assignedTo || task.assignedTo.length === 0) ||
+            task.assignedTo?.some(u => (u._id === user?._id || u === user?._id));
+
+        return matchesSearch && matchesStatus && matchesPriority && matchesAssignee && isVisible;
     });
 
     if (loading) {
@@ -286,6 +329,7 @@ const ProjectView = () => {
                 onClose={() => setIsSettingsOpen(false)}
                 project={project}
                 onUpdate={(updatedProject) => setProject(updatedProject)}
+                isAdmin={isAdmin}
             />
         </div>
     );

@@ -48,7 +48,16 @@ const projectSchema = new mongoose.Schema({
         default: 0
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+});
+
+// Virtual for tasks
+projectSchema.virtual('tasks', {
+    ref: 'Task',
+    localField: '_id',
+    foreignField: 'project'
 });
 
 // Default workflow stages and keyPrefix

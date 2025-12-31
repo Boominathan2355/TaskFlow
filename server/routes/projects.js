@@ -6,6 +6,12 @@ const { authenticate } = require('../middleware/auth');
 // All project routes require authentication
 router.use(authenticate);
 
+// Get all projects for specific user (Admin only)
+router.get('/assignments/user/:userId', projectController.getUserProjects);
+
+// Update project assignments for user (Admin only)
+router.put('/assignments/user/:userId', projectController.updateUserProjects);
+
 // Get all projects for current user
 router.get('/', projectController.getAllProjects);
 

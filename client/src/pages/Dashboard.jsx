@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { projectAPI, taskAPI } from '../services';
 import { useAuth } from '../contexts/AuthContext';
+import { useSocket } from '../contexts/SocketContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
@@ -20,9 +21,23 @@ const Dashboard = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    const socket = useSocket();
+
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        if (socket) {
+            socket.on('dashboard_update', () => {
+                fetchData();
+            });
+
+            return () => {
+                socket.off('dashboard_update');
+            };
+        }
+    }, [socket]);
 
     const fetchData = async () => {
         try {
@@ -125,7 +140,7 @@ const Dashboard = () => {
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className={`w-2 h-2 rounded-full ${task.stage === 'Done' ? 'bg-emerald-500' :
-                                                            task.stage === 'In Progress' ? 'bg-blue-500' : 'bg-slate-300'
+                                                        task.stage === 'In Progress' ? 'bg-blue-500' : 'bg-slate-300'
                                                         }`} />
                                                     <div className="flex flex-col min-w-0">
                                                         <span className="font-bold text-foreground truncate max-w-[300px]">{task.title}</span>

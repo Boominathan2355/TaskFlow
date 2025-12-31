@@ -21,11 +21,25 @@ const createActivityLog = async (project, user, action, description, metadata = 
 exports.getAllProjects = async (req, res) => {
     try {
         const userId = req.user._id;
+        const isAdmin = req.user.role === 'Admin';
 
-        // Show all projects to all users
-        const projects = await Project.find({ status: 'Active' })
+        let query = { status: 'Active' };
+
+        // If not system admin, only show projects where they are owner or member
+        if (!isAdmin) {
+            query = {
+                status: 'Active',
+                $or: [
+                    { owner: userId },
+                    { 'members.user': userId }
+                ]
+            };
+        }
+
+        const projects = await Project.find(query)
             .populate('owner', 'name email avatar')
             .populate('members.user', 'name email avatar')
+            .populate('tasks')
             .sort({ createdAt: -1 });
 
         res.json({ projects });
@@ -93,6 +107,10 @@ exports.createProject = async (req, res) => {
             `${req.user.name} created the project`
         );
 
+        // Emit real-time event
+        req.app.get('io').emit('project_created', { project });
+        req.app.get('io').emit('dashboard_update');
+
         res.status(201).json({
             message: 'Project created successfully',
             project
@@ -144,6 +162,10 @@ exports.updateProject = async (req, res) => {
             `${req.user.name} updated the project`
         );
 
+        // Emit real-time event
+        req.app.get('io').emit('project_updated', { project });
+        req.app.get('io').emit('dashboard_update');
+
         res.json({
             message: 'Project updated successfully',
             project
@@ -170,6 +192,10 @@ exports.deleteProject = async (req, res) => {
         }
 
         await Project.findByIdAndDelete(projectId);
+
+        // Emit real-time events
+        req.app.get('io').emit('project_deleted', { projectId });
+        req.app.get('io').emit('dashboard_update');
 
         res.json({ message: 'Project deleted successfully' });
     } catch (error) {
@@ -267,6 +293,54 @@ exports.removeProjectMember = async (req, res) => {
         });
     } catch (error) {
         console.error('Remove member error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// Get all projects for a specific user (Admin only)
+exports.getUserProjects = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const projects = await Project.find({
+            $or: [
+                { owner: userId },
+                { 'members.user': userId }
+            ]
+        }).select('title _id');
+
+        res.json({ projects });
+    } catch (error) {
+        console.error('Get user projects error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// Update all project assignments for a user (Admin only)
+exports.updateUserProjects = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { projectIds } = req.body; // Array of project IDs user should belong to
+
+        // 1. Remove user from all projects they are currently a member of (except where they are owner)
+        await Project.updateMany(
+            { 'members.user': userId, owner: { $ne: userId } },
+            { $pull: { members: { user: userId } } }
+        );
+
+        // 2. Add user to new project list (except where they are owner)
+        if (projectIds && projectIds.length > 0) {
+            await Project.updateMany(
+                { _id: { $in: projectIds }, owner: { $ne: userId } },
+                { $addToSet: { members: { user: userId, role: 'Member' } } }
+            );
+        }
+
+        // Emit real-time events for dashboard update
+        req.app.get('io').emit('dashboard_update');
+
+        res.json({ message: 'Project assignments updated successfully' });
+    } catch (error) {
+        console.error('Update user projects error:', error);
         res.status(500).json({ error: 'Server error' });
     }
 };

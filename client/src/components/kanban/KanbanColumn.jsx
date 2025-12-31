@@ -46,10 +46,11 @@ const KanbanColumn = ({ stage, tasks, onTaskClick, onAddTask }) => {
             <div
                 ref={setNodeRef}
                 className={`
-                    flex flex-col h-full rounded-xl border transition-colors min-h-[500px]
+                    flex flex-col rounded-xl border transition-colors
                     ${styles.wrapper}
                     ${isOver ? 'ring-2 ring-primary/20 bg-accent/20' : ''}
                 `}
+                style={{ minHeight: 'min(calc(100vh - 250px), 800px)' }}
             >
                 {/* Header */}
                 <div className={`p-4 flex items-center justify-between ${styles.header}`}>
@@ -59,18 +60,32 @@ const KanbanColumn = ({ stage, tasks, onTaskClick, onAddTask }) => {
                             {tasks.length}
                         </span>
                     </div>
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6 hover:bg-black/5 dark:hover:bg-white/10"
-                        onClick={() => onAddTask(stage)}
-                    >
-                        <Plus className="w-4 h-4" />
-                    </Button>
+                    {stage === 'Backlog' && (
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 hover:bg-black/5 dark:hover:bg-white/10"
+                            onClick={() => onAddTask(stage)}
+                        >
+                            <Plus className="w-4 h-4" />
+                        </Button>
+                    )}
                 </div>
 
                 {/* Tasks Container */}
                 <div className="flex-1 p-3 space-y-3 overflow-y-auto">
+                    {stage === 'Backlog' && (
+                        <button
+                            onClick={() => onAddTask(stage)}
+                            className="w-full flex flex-col items-center justify-center py-6 gap-2 rounded-xl border-2 border-dashed border-black/5 dark:border-white/5 bg-background/40 hover:bg-background/80 hover:border-primary/30 transition-all group"
+                        >
+                            <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                                <Plus className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-foreground">New Task</span>
+                        </button>
+                    )}
+
                     <SortableContext items={tasks.map(t => t._id)} strategy={verticalListSortingStrategy}>
                         {tasks.map((task) => (
                             <TaskCard
@@ -82,8 +97,8 @@ const KanbanColumn = ({ stage, tasks, onTaskClick, onAddTask }) => {
                     </SortableContext>
 
                     {tasks.length === 0 && (
-                        <div className="h-24 flex items-center justify-center border-2 border-dashed border-black/5 dark:border-white/5 rounded-lg">
-                            <p className="text-xs text-muted-foreground/50 font-medium">Drop valid items</p>
+                        <div className="flex-1 min-h-[150px] flex items-center justify-center border-2 border-dashed border-black/5 dark:border-white/5 rounded-lg opacity-50">
+                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter italic">Drop valid items</p>
                         </div>
                     )}
                 </div>

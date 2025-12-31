@@ -1,5 +1,7 @@
 require('dotenv').config();
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const cors = require('cors');
 const connectDB = require('./config/database');
 
@@ -15,6 +17,40 @@ const uploadRoutes = require('./routes/upload');
 
 // Initialize Express app
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: "*", // Adjust this for production
+        methods: ["GET", "POST", "PUT", "DELETE"]
+    }
+});
+
+// Socket.io connection handling
+io.on('connection', (socket) => {
+    console.log('A user connected:', socket.id);
+
+    socket.on('join_project', (projectId) => {
+        socket.join(projectId);
+        console.log(`User ${socket.id} joined project: ${projectId}`);
+    });
+
+    socket.on('join_user', (userId) => {
+        socket.join(`user_${userId}`);
+        console.log(`User ${userId} joined personal room: user_${userId} (socket: ${socket.id})`);
+    });
+
+    socket.on('leave_project', (projectId) => {
+        socket.leave(projectId);
+        console.log(`User ${socket.id} left project: ${projectId}`);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
+});
+
+// Make io available to routes
+app.set('io', io);
 
 // Connect to MongoDB
 connectDB();
@@ -87,10 +123,10 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 if (require.main === module) {
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
         console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
 }
 
-module.exports = app;
+module.exports = { app, server, io };

@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, GripVertical, AlertCircle, Trash2 } from 'lucide-react';
+import { X, Plus, GripVertical, AlertCircle, Trash2, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import { projectAPI } from '../services';
 
-const ProjectSettingsModal = ({ isOpen, onClose, project, onUpdate }) => {
+const ProjectSettingsModal = ({ isOpen, onClose, project, onUpdate, isAdmin }) => {
     const [stages, setStages] = useState([]);
     const [newStage, setNewStage] = useState('');
     const [loading, setLoading] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState('');
     const [error, setError] = useState('');
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (project?.workflowStages) {
@@ -63,6 +67,20 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onUpdate }) => {
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to update workflow');
         } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (confirmDelete !== project.title) return;
+
+        setLoading(true);
+        setError('');
+        try {
+            await projectAPI.deleteProject(project._id);
+            navigate('/');
+        } catch (err) {
+            setError(err.response?.data?.error || 'Failed to delete project');
             setLoading(false);
         }
     };
@@ -127,7 +145,7 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onUpdate }) => {
                         </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 pb-4">
                         <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                             Add New Stage
                         </label>
@@ -144,6 +162,65 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onUpdate }) => {
                             </Button>
                         </div>
                     </div>
+
+                    {/* Danger Zone */}
+                    {isAdmin && (
+                        <div className="pt-6 border-t border-border">
+                            <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 space-y-4">
+                                <div className="flex items-center gap-2 text-destructive">
+                                    <AlertTriangle className="w-4 h-4" />
+                                    <h3 className="text-sm font-bold uppercase tracking-tight">Danger Zone</h3>
+                                </div>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    Deleting this project will permanently remove all associated tasks, comments, and files. This action cannot be undone.
+                                </p>
+
+                                {!isDeleting ? (
+                                    <Button
+                                        variant="outline"
+                                        className="w-full border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all"
+                                        onClick={() => setIsDeleting(true)}
+                                    >
+                                        Delete Project
+                                    </Button>
+                                ) : (
+                                    <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-destructive uppercase tracking-widest">
+                                                Confirm project title
+                                            </p>
+                                            <Input
+                                                placeholder={`Type "${project.title}" to confirm`}
+                                                value={confirmDelete}
+                                                onChange={(e) => setConfirmDelete(e.target.value)}
+                                                className="h-9 text-sm border-destructive/30 focus:border-destructive focus:ring-destructive/20"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-[11px] uppercase tracking-widest"
+                                                disabled={confirmDelete !== project.title || loading}
+                                                onClick={handleDelete}
+                                            >
+                                                {loading ? 'Deleting...' : 'Confirm Delete'}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                className="px-4 text-[11px] font-bold uppercase tracking-widest"
+                                                onClick={() => {
+                                                    setIsDeleting(false);
+                                                    setConfirmDelete('');
+                                                }}
+                                            >
+                                                Cancel
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}

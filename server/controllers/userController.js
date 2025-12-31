@@ -104,6 +104,10 @@ exports.updateUserRole = async (req, res) => {
                 avatar: user.avatar
             }
         });
+
+        // Emit real-time updates
+        req.app.get('io').emit('user_updated', { user });
+        req.app.get('io').emit('dashboard_update');
     } catch (error) {
         console.error('Update user role error:', error);
         res.status(500).json({ error: 'Server error' });
@@ -125,6 +129,10 @@ exports.deleteUser = async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
+
+        // Emit real-time event
+        req.app.get('io').emit('user_deleted', { userId });
+        req.app.get('io').emit('dashboard_update');
 
         res.json({ message: 'User deleted successfully' });
     } catch (error) {
@@ -166,6 +174,10 @@ exports.createUser = async (req, res) => {
                 avatar: user.avatar
             }
         });
+
+        // Emit real-time updates
+        req.app.get('io').emit('user_created', { user });
+        req.app.get('io').emit('dashboard_update');
     } catch (error) {
         console.error('Create user error:', error);
         res.status(500).json({ error: 'Server error' });
