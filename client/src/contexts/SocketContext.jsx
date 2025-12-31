@@ -17,9 +17,12 @@ export const SocketProvider = ({ children }) => {
     useEffect(() => {
         let activeSocket = null;
 
-        // Allow disabling sockets via env var (useful for Vercel serverless)
-        if (user && !import.meta.env.VITE_DISABLE_SOCKET) {
-            const socketUrl = config.API_URL || undefined; // undefined defaults to window.location.host
+        // Detect if we are running on Vercel automatically
+        const isVercel = window.location.hostname.includes('vercel.app');
+        const shouldDisableSocket = import.meta.env.VITE_DISABLE_SOCKET === 'true' || isVercel;
+
+        if (user && !shouldDisableSocket) {
+            const socketUrl = config.API_URL || undefined;
 
             activeSocket = io(socketUrl, {
                 path: '/socket.io',
@@ -36,7 +39,10 @@ export const SocketProvider = ({ children }) => {
             });
 
             activeSocket.on('connect_error', (err) => {
-                console.error('Socket Connection Error:', err.message);
+                // Only log if not on Vercel or explicitly enabled, to keep console clean
+                if (!isVercel) {
+                    console.error('Socket Connection Error:', err.message);
+                }
             });
 
             setSocket(activeSocket);
