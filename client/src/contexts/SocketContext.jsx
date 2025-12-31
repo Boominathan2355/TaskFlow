@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
+import { config } from '../config';
+
 const SocketContext = createContext();
 
 export const useSocket = () => {
@@ -15,8 +17,11 @@ export const SocketProvider = ({ children }) => {
     useEffect(() => {
         let activeSocket = null;
 
-        if (user) {
-            activeSocket = io({
+        // Allow disabling sockets via env var (useful for Vercel serverless)
+        if (user && !import.meta.env.VITE_DISABLE_SOCKET) {
+            const socketUrl = config.API_URL || undefined; // undefined defaults to window.location.host
+
+            activeSocket = io(socketUrl, {
                 path: '/socket.io',
                 transports: ['polling', 'websocket'],
                 upgrade: true,
