@@ -25,7 +25,9 @@ export const SocketProvider = ({ children }) => {
                 path: '/socket.io',
                 transports: ['polling', 'websocket'],
                 upgrade: true,
-                autoConnect: true
+                autoConnect: true,
+                reconnectionAttempts: 5, // Limit retries to stop console spam on Vercel
+                timeout: 10000
             });
 
             activeSocket.on('connect', () => {
