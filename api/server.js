@@ -1,4 +1,4 @@
 // Vercel serverless function wrapper for Express server
-const app = require('../server/server.js');
+const { app } = require('../server/server.js');
 
 module.exports = app;
