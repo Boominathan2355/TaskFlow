@@ -141,11 +141,24 @@ exports.createTask = async (req, res) => {
             return res.status(404).json({ error: 'Project not found' });
         }
 
-        const hasAccess = project.owner.toString() === req.user._id.toString() ||
-            project.members.some(m => m.user.toString() === req.user._id.toString());
+        const isProjectOwner = project.owner.toString() === req.user._id.toString();
+        const isProjectMember = project.members.some(m => m.user.toString() === req.user._id.toString());
+        const isGlobalAdmin = req.user.role === 'Admin';
+        const hasAccess = isProjectOwner || isProjectMember || isGlobalAdmin;
+
+        // Debug logging
+        console.log('=== CREATE TASK ACCESS CHECK ===');
+        console.log('User ID:', req.user._id.toString());
+        console.log('User Role:', req.user.role);
+        console.log('Project Owner:', project.owner.toString());
+        console.log('Is Project Owner:', isProjectOwner);
+        console.log('Is Project Member:', isProjectMember);
+        console.log('Is Global Admin:', isGlobalAdmin);
+        console.log('Has Access:', hasAccess);
+        console.log('================================');
 
         if (!hasAccess || req.user.role === 'Viewer') {
-            return res.status(403).json({ error: 'Access denied. Viewers cannot create tasks.' });
+            return res.status(403).json({ error: 'Access denied. You do not have permission to create tasks in this project.' });
         }
 
         // Generate task key (e.g., P-001)
