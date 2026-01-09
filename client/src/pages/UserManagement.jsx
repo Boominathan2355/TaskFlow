@@ -207,14 +207,14 @@ const UserManagement = () => {
                     <div className="flex items-center gap-2 bg-background border border-border rounded-lg px-3 py-1.5">
                         <Filter className="w-3.5 h-3.5 text-muted-foreground" />
                         <select
-                            className="bg-transparent border-none text-sm font-medium focus:ring-0 outline-none cursor-pointer"
+                            className="bg-card border-none text-sm font-medium focus:ring-0 outline-none cursor-pointer text-foreground"
                             value={roleFilter}
                             onChange={(e) => setRoleFilter(e.target.value)}
                         >
-                            <option value="All">All Roles</option>
-                            <option value="Admin">Admin</option>
-                            <option value="Member">Member</option>
-                            <option value="Viewer">Viewer</option>
+                            <option value="All" className="bg-card text-foreground">All Roles</option>
+                            <option value="Admin" className="bg-card text-foreground">Admin</option>
+                            <option value="Member" className="bg-card text-foreground">Member</option>
+                            <option value="Viewer" className="bg-card text-foreground">Viewer</option>
                         </select>
                     </div>
                 </div>
@@ -298,15 +298,17 @@ const UserManagement = () => {
                                     <td className="px-6 py-5">
                                         <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity relative">
                                             <div className="relative">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => setActiveRoleMenu(activeRoleMenu === user._id ? null : user._id)}
-                                                    className="h-9 px-3 gap-2 border-border/50 hover:bg-muted/50 text-[11px] font-bold uppercase tracking-wider"
-                                                >
-                                                    <Shield className="w-3.5 h-3.5" />
-                                                    Role
-                                                </Button>
+                                                {user.email !== 'admin@taskflow.com' && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setActiveRoleMenu(activeRoleMenu === user._id ? null : user._id)}
+                                                        className="h-9 px-3 gap-2 border-border/50 hover:bg-muted/50 text-[11px] font-bold uppercase tracking-wider"
+                                                    >
+                                                        <Shield className="w-3.5 h-3.5" />
+                                                        Role
+                                                    </Button>
+                                                )}
 
                                                 {user.role !== 'Admin' && (
                                                     <Button
@@ -348,7 +350,7 @@ const UserManagement = () => {
                                                 )}
                                             </div>
 
-                                            {user.role !== 'Admin' && (
+                                            {user.role !== 'Admin' && user.email !== 'admin@taskflow.com' && (
                                                 <Button
                                                     variant="destructive"
                                                     size="icon"

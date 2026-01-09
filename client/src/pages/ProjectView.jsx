@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { projectAPI, taskAPI } from '../services';
 import KanbanBoard from '../components/kanban/KanbanBoard';
 import TaskListView from '../components/TaskListView';
-import TaskModal from '../components/TaskModal';
 import ActivityLog from '../components/ActivityLog';
 import { Search, LayoutGrid, List, Activity } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
-import CreateTaskModal from '../components/CreateTaskModal';
 import ProjectSettingsModal from '../components/ProjectSettingsModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -18,12 +16,11 @@ import { Settings } from 'lucide-react';
 
 const ProjectView = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [project, setProject] = useState(null);
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [selectedTask, setSelectedTask] = useState(null);
     const [activeTab, setActiveTab] = useState('board');
-
     // Create Task Modal State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [createStage, setCreateStage] = useState('Backlog');
@@ -120,24 +117,12 @@ const ProjectView = () => {
     };
 
     const handleTaskClick = (task) => {
-        setSelectedTask(task);
+        navigate(`/projects/${id}/tasks/${task._id}`);
     };
 
-    const openCreateModal = (stage) => {
-        setCreateStage(stage || (project?.workflowStages?.[0] || 'Backlog'));
-        setIsCreateModalOpen(true);
-    };
-
-    const handleTaskCreation = async (taskData) => {
-        try {
-            const payload = { ...taskData, projectId: id };
-            const { data } = await taskAPI.createTask(payload);
-            setTasks([...tasks, data.task]);
-            return data.task;
-        } catch (error) {
-            console.error('Error creating task:', error);
-            throw error;
-        }
+    const openCreatePage = (stage) => {
+        const stageParam = stage ? `?stage=${encodeURIComponent(stage)}` : '';
+        navigate(`/projects/${id}/create-task${stageParam}`);
     };
 
     const handleTaskUpdate = (updatedTask) => {
@@ -246,37 +231,37 @@ const ProjectView = () => {
                             </div>
 
                             <select
-                                className="h-9 rounded-lg border border-input bg-muted/20 px-3 text-xs font-medium focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer hover:bg-muted/30 transition-colors"
+                                className="h-9 rounded-lg border border-border/50 bg-card px-3 text-xs font-medium focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer hover:bg-muted/30 transition-colors text-foreground"
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
                             >
-                                <option value="All">All Stages</option>
+                                <option value="All" className="bg-card text-foreground">All Stages</option>
                                 {project.workflowStages.map(stage => (
-                                    <option key={stage} value={stage}>{stage}</option>
+                                    <option key={stage} value={stage} className="bg-card text-foreground">{stage}</option>
                                 ))}
                             </select>
 
                             <select
-                                className="h-9 rounded-lg border border-input bg-muted/20 px-3 text-xs font-medium focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer hover:bg-muted/30 transition-colors"
+                                className="h-9 rounded-lg border border-border/50 bg-card px-3 text-xs font-medium focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer hover:bg-muted/30 transition-colors text-foreground"
                                 value={priorityFilter}
                                 onChange={(e) => setPriorityFilter(e.target.value)}
                             >
-                                <option value="All">All Priorities</option>
-                                <option value="Low">Low</option>
-                                <option value="Medium">Medium</option>
-                                <option value="High">High</option>
-                                <option value="Urgent">Urgent</option>
+                                <option value="All" className="bg-card text-foreground">All Priorities</option>
+                                <option value="Low" className="bg-card text-foreground">Low</option>
+                                <option value="Medium" className="bg-card text-foreground">Medium</option>
+                                <option value="High" className="bg-card text-foreground">High</option>
+                                <option value="Urgent" className="bg-card text-foreground">Urgent</option>
                             </select>
 
                             <select
-                                className="h-9 rounded-lg border border-input bg-muted/20 px-3 text-xs font-medium focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer hover:bg-muted/30 transition-colors"
+                                className="h-9 rounded-lg border border-border/50 bg-card px-3 text-xs font-medium focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer hover:bg-muted/30 transition-colors text-foreground"
                                 value={assigneeFilter}
                                 onChange={(e) => setAssigneeFilter(e.target.value)}
                             >
-                                <option value="All">All Assignees</option>
-                                <option value="Unassigned">Unassigned</option>
+                                <option value="All" className="bg-card text-foreground">All Assignees</option>
+                                <option value="Unassigned" className="bg-card text-foreground">Unassigned</option>
                                 {uniqueAssignees.map(u => (
-                                    <option key={u.id} value={u.id}>{u.name}</option>
+                                    <option key={u.id} value={u.id} className="bg-card text-foreground">{u.name}</option>
                                 ))}
                             </select>
                         </div>
@@ -288,7 +273,7 @@ const ProjectView = () => {
                             stages={project.workflowStages}
                             onTaskMove={handleTaskMove}
                             onTaskClick={handleTaskClick}
-                            onAddTask={openCreateModal}
+                            onAddTask={openCreatePage}
                         />
                     </TabsContent>
 
@@ -306,23 +291,6 @@ const ProjectView = () => {
                     </TabsContent>
                 </Tabs>
             </div>
-
-            {selectedTask && (
-                <TaskModal
-                    task={selectedTask}
-                    onClose={() => setSelectedTask(null)}
-                    onUpdate={handleTaskUpdate}
-                    project={project}
-                />
-            )}
-
-            <CreateTaskModal
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onCreate={handleTaskCreation}
-                project={project}
-                initialStage={createStage}
-            />
 
             <ProjectSettingsModal
                 isOpen={isSettingsOpen}

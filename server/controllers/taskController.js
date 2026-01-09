@@ -4,6 +4,13 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
 
+// Helper to get task query (by Ticket ID)
+const getTaskQuery = async (id) => {
+    // Since _id is now the ticket ID, we just return it directly
+    // Both MongoDB IDs and ticket IDs work the same way now
+    return { _id: id.toUpperCase() };
+};
+
 // Helper to create notification
 const createNotification = async (io, recipient, type, title, message, relatedTask, relatedProject) => {
     try {
@@ -96,7 +103,14 @@ exports.getMyTasks = async (req, res) => {
 // Get task by ID
 exports.getTaskById = async (req, res) => {
     try {
-        const task = await Task.findById(req.params.id)
+        const { id } = req.params;
+        const query = await getTaskQuery(id);
+
+        if (!query) {
+            return res.status(400).json({ error: 'Invalid task format' });
+        }
+
+        const task = await Task.findOne(query)
             .populate('assignedTo', 'name email avatar')
             .populate('createdBy', 'name email avatar')
             .populate('comments.author', 'name email avatar')
@@ -165,14 +179,15 @@ exports.createTask = async (req, res) => {
         const taskNumber = project.taskCounter.toString().padStart(3, '0');
         const taskKey = `${project.keyPrefix || 'T'}-${taskNumber}`;
 
+
         const task = new Task({
+            _id: taskKey,  // Set _id to the ticket ID
             title,
             description: description || '',
             project: projectId,
             stage: stage || project.workflowStages[0] || 'Backlog',
             priority: priority || 'Medium',
             type: type || 'Task',
-            key: taskKey,
             dueDate: dueDate || null,
             assignedTo: assignedTo || [],
             createdBy: req.user._id
@@ -227,9 +242,14 @@ exports.createTask = async (req, res) => {
 exports.updateTask = async (req, res) => {
     try {
         const { title, description, stage, priority, dueDate, assignedTo } = req.body;
-        const taskId = req.params.id;
+        const id = req.params.id;
+        const query = await getTaskQuery(id);
 
-        const task = await Task.findById(taskId).populate('project');
+        if (!query) {
+            return res.status(400).json({ error: 'Invalid task format' });
+        }
+
+        const task = await Task.findOne(query).populate('project');
 
         if (!task) {
             return res.status(404).json({ error: 'Task not found' });
@@ -237,8 +257,10 @@ exports.updateTask = async (req, res) => {
 
         // Check if user has access
         const project = await Project.findById(task.project._id);
-        const hasAccess = project.owner.toString() === req.user._id.toString() ||
-            project.members.some(m => m.user.toString() === req.user._id.toString());
+        const isProjectOwner = project.owner.toString() === req.user._id.toString();
+        const isProjectMember = project.members.some(m => m.user.toString() === req.user._id.toString());
+        const isGlobalAdmin = req.user.role === 'Admin';
+        const hasAccess = isProjectOwner || isProjectMember || isGlobalAdmin;
 
         if (!hasAccess || req.user.role === 'Viewer') {
             return res.status(403).json({ error: 'Access denied. Viewers cannot update tasks.' });
@@ -333,8 +355,14 @@ exports.updateTask = async (req, res) => {
 // Delete task
 exports.deleteTask = async (req, res) => {
     try {
-        const taskId = req.params.id;
-        const task = await Task.findById(taskId);
+        const id = req.params.id;
+        const query = await getTaskQuery(id);
+
+        if (!query) {
+            return res.status(404).json({ error: 'Task or Project not found' });
+        }
+
+        const task = await Task.findOne(query);
 
         if (!task) {
             return res.status(404).json({ error: 'Task not found' });
@@ -362,10 +390,10 @@ exports.deleteTask = async (req, res) => {
             `${req.user.name} deleted task "${task.title}"`
         );
 
-        await Task.findByIdAndDelete(taskId);
+        await Task.findByIdAndDelete(task._id);
 
         // Emit real-time event
-        req.app.get('io').to(task.project.toString()).emit('task_deleted', { taskId, projectId: task.project });
+        req.app.get('io').to(task.project.toString()).emit('task_deleted', { taskId: task._id, projectId: task.project });
         req.app.get('io').emit('dashboard_update');
 
         res.json({ message: 'Task deleted successfully' });
@@ -379,13 +407,16 @@ exports.deleteTask = async (req, res) => {
 exports.addComment = async (req, res) => {
     try {
         const { text } = req.body;
-        const taskId = req.params.id;
+        const id = req.params.id;
 
         if (!text) {
             return res.status(400).json({ error: 'Comment text is required' });
         }
 
-        const task = await Task.findById(taskId);
+        const query = await getTaskQuery(id);
+        if (!query) return res.status(404).json({ error: 'Task not found' });
+
+        const task = await Task.findOne(query);
 
         if (!task) {
             return res.status(404).json({ error: 'Task not found' });
@@ -427,6 +458,37 @@ exports.addComment = async (req, res) => {
             );
         }
 
+        // Parse and handle @mentions in comment text
+        const mentionRegex = /@(\w+)/g;
+        const mentions = [];
+        let match;
+        while ((match = mentionRegex.exec(text)) !== null) {
+            mentions.push(match[1]);
+        }
+
+        if (mentions.length > 0) {
+            // Find users by name (case-insensitive partial match)
+            const mentionedUsers = await User.find({
+                name: { $regex: mentions.map(m => `^${m}`).join('|'), $options: 'i' }
+            });
+
+            for (const mentionedUser of mentionedUsers) {
+                // Don't notify the commenter themselves or users already notified
+                const alreadyNotified = notifyUsers.some(id => id.toString() === mentionedUser._id.toString());
+                if (mentionedUser._id.toString() !== req.user._id.toString() && !alreadyNotified) {
+                    await createNotification(
+                        req.app.get('io'),
+                        mentionedUser._id,
+                        'mention',
+                        'You were mentioned',
+                        `${req.user.name} mentioned you in a comment on "${task.title}"`,
+                        task._id,
+                        task.project
+                    );
+                }
+            }
+        }
+
         // Populate fields needed for frontend
         await task.populate('assignedTo', 'name email avatar');
         await task.populate('createdBy', 'name email avatar');
@@ -449,8 +511,10 @@ exports.addComment = async (req, res) => {
 exports.deleteComment = async (req, res) => {
     try {
         const { taskId, commentId } = req.params;
+        const query = await getTaskQuery(taskId);
+        if (!query) return res.status(404).json({ error: 'Task not found' });
 
-        const task = await Task.findById(taskId);
+        const task = await Task.findOne(query);
 
         if (!task) {
             return res.status(404).json({ error: 'Task not found' });
@@ -488,13 +552,16 @@ exports.deleteComment = async (req, res) => {
 exports.addAttachment = async (req, res) => {
     try {
         const { filename, url, mimeType, size } = req.body;
-        const taskId = req.params.id;
+        const id = req.params.id;
 
         if (!filename || !url) {
             return res.status(400).json({ error: 'Filename and URL are required' });
         }
 
-        const task = await Task.findById(taskId);
+        const query = await getTaskQuery(id);
+        if (!query) return res.status(404).json({ error: 'Task not found' });
+
+        const task = await Task.findOne(query);
 
         if (!task) {
             return res.status(404).json({ error: 'Task not found' });
@@ -529,4 +596,152 @@ exports.addAttachment = async (req, res) => {
         console.error('Add attachment error:', error);
         res.status(500).json({ error: 'Server error' });
     }
+};
+
+// Toggle vote on task
+exports.toggleVote = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const query = await getTaskQuery(id);
+        if (!query) return res.status(404).json({ error: 'Task not found' });
+
+        const task = await Task.findOne(query);
+
+        if (!task) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+
+        const voteIndex = task.votes.indexOf(req.user._id);
+        const hasVoted = voteIndex > -1;
+
+        if (hasVoted) {
+            task.votes.splice(voteIndex, 1);
+        } else {
+            task.votes.push(req.user._id);
+        }
+
+        await task.save();
+        await task.populate('assignedTo', 'name email avatar');
+        await task.populate('createdBy', 'name email avatar');
+        await task.populate('comments.author', 'name email avatar');
+
+        // Create activity log
+        await createActivityLog(
+            req.app.get('io'),
+            task.project,
+            task._id,
+            req.user._id,
+            hasVoted ? 'task_unvoted' : 'task_voted',
+            `${req.user.name} ${hasVoted ? 'removed vote from' : 'voted for'} "${task.title}"`
+        );
+
+        // Emit real-time update
+        req.app.get('io').to(task.project.toString()).emit('task_updated', { task, projectId: task.project });
+
+        res.json({
+            message: hasVoted ? 'Vote removed' : 'Vote added',
+            task
+        });
+    } catch (error) {
+        console.error('Toggle vote error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// Toggle watch on task
+exports.toggleWatch = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const query = await getTaskQuery(id);
+        if (!query) return res.status(404).json({ error: 'Task not found' });
+
+        const task = await Task.findOne(query);
+
+        if (!task) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+
+        const watchIndex = task.watchers.indexOf(req.user._id);
+        const isWatching = watchIndex > -1;
+
+        if (isWatching) {
+            task.watchers.splice(watchIndex, 1);
+        } else {
+            task.watchers.push(req.user._id);
+        }
+
+        await task.save();
+        await task.populate('assignedTo', 'name email avatar');
+        await task.populate('createdBy', 'name email avatar');
+        await task.populate('comments.author', 'name email avatar');
+
+        // Create activity log
+        await createActivityLog(
+            req.app.get('io'),
+            task.project,
+            task._id,
+            req.user._id,
+            isWatching ? 'task_unwatched' : 'task_watched',
+            `${req.user.name} ${isWatching ? 'stopped watching' : 'started watching'} "${task.title}"`
+        );
+
+        // Emit real-time update
+        req.app.get('io').to(task.project.toString()).emit('task_updated', { task, projectId: task.project });
+
+        res.json({
+            message: isWatching ? 'Stopped watching' : 'Started watching',
+            task
+        });
+    } catch (error) {
+        console.error('Toggle watch error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// Search tasks across projects (with access control)
+exports.searchTasks = async (req, res) => {
+    try {
+        const { query } = req.query;
+        if (!query) {
+            return res.json({ tasks: [] });
+        }
+
+        let allowedProjectIds = [];
+
+        // If not Admin, filter by projects the user has access to
+        if (req.user.role !== 'Admin') {
+            const projects = await Project.find({
+                $or: [
+                    { owner: req.user._id },
+                    { 'members.user': req.user._id }
+                ]
+            }).select('_id');
+            allowedProjectIds = projects.map(p => p._id);
+
+            if (allowedProjectIds.length === 0) {
+                return res.json({ tasks: [] });
+            }
+        }
+
+        const searchCriteria = {
+            $or: [
+                { title: { $regex: query, $options: 'i' } },
+                { _id: { $regex: query, $options: 'i' } }
+            ]
+        };
+
+    if (req.user.role !== 'Admin') {
+        searchCriteria.project = { $in: allowedProjectIds };
+    }
+
+    const tasks = await Task.find(searchCriteria)
+        .populate('project', 'title keyPrefix')
+        .limit(10)
+        .sort({ updatedAt: -1 });
+
+    res.json({ tasks });
+} catch (error) {
+    console.error('Search tasks error:', error);
+    res.status(500).json({ error: 'Server error' });
+}
 };

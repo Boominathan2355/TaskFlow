@@ -6,11 +6,50 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [lastActivity, setLastActivity] = useState(Date.now());
+
+    // Activity listener to track user interaction
+    useEffect(() => {
+        const updateActivity = () => setLastActivity(Date.now());
+
+        window.addEventListener('mousemove', updateActivity);
+        window.addEventListener('keypress', updateActivity);
+        window.addEventListener('click', updateActivity);
+        window.addEventListener('scroll', updateActivity);
+
+        return () => {
+            window.removeEventListener('mousemove', updateActivity);
+            window.removeEventListener('keypress', updateActivity);
+            window.removeEventListener('click', updateActivity);
+            window.removeEventListener('scroll', updateActivity);
+        };
+    }, []);
+
+    // Session check interval
+    useEffect(() => {
+        if (!user) return;
+
+        const checkSession = async () => {
+            const now = Date.now();
+            const tokenTimestamp = parseInt(sessionStorage.getItem('tokenTimestamp') || '0');
+            const IDLE_TIMEOUT = 60 * 60 * 1000; // 1 hour
+            const REFRESH_THRESHOLD = 50 * 60 * 1000; // 50 minutes
+
+            // Idle Check: Logout if inactive for > 1 hour
+            if (now - lastActivity > IDLE_TIMEOUT) {
+                console.log('Session expired due to inactivity');
+                logout();
+            }
+        };
+
+        const interval = setInterval(checkSession, 60 * 1000); // Check every minute
+        return () => clearInterval(interval);
+    }, [user, lastActivity]);
 
     useEffect(() => {
         // Check if user is logged in on mount
-        const token = localStorage.getItem('token');
-        const savedUser = localStorage.getItem('user');
+        const token = sessionStorage.getItem('token');
+        const savedUser = sessionStorage.getItem('user');
 
         if (token && savedUser) {
             setUser(JSON.parse(savedUser));
@@ -36,9 +75,11 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         try {
             const { data } = await authAPI.login({ email, password });
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
+            sessionStorage.setItem('token', data.token);
+            sessionStorage.setItem('user', JSON.stringify(data.user));
+            sessionStorage.setItem('tokenTimestamp', Date.now().toString());
             setUser(data.user);
+            setLastActivity(Date.now());
             return { success: true };
         } catch (error) {
             return {
@@ -51,9 +92,11 @@ export const AuthProvider = ({ children }) => {
     const signup = async (name, email, password) => {
         try {
             const { data } = await authAPI.signup({ name, email, password });
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
+            sessionStorage.setItem('token', data.token);
+            sessionStorage.setItem('user', JSON.stringify(data.user));
+            sessionStorage.setItem('tokenTimestamp', Date.now().toString());
             setUser(data.user);
+            setLastActivity(Date.now());
             return { success: true };
         } catch (error) {
             return {
@@ -64,14 +107,15 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
+        sessionStorage.removeItem('tokenTimestamp');
         setUser(null);
     };
 
     const updateUserProfile = (updatedUser) => {
         setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        sessionStorage.setItem('user', JSON.stringify(updatedUser));
     };
 
     return (

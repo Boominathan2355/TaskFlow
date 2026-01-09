@@ -91,6 +91,11 @@ exports.updateUserRole = async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
+        // Prevent modifying super admin role
+        if (user.email === 'admin@taskflow.com') {
+            return res.status(403).json({ error: 'Super Admin role cannot be modified' });
+        }
+
         user.role = role;
         await user.save();
 
@@ -124,11 +129,18 @@ exports.deleteUser = async (req, res) => {
             return res.status(400).json({ error: 'Cannot delete your own account' });
         }
 
-        const user = await User.findByIdAndDelete(userId);
+        const user = await User.findById(userId);
 
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
+
+        // Prevent deleting super admin
+        if (user.email === 'admin@taskflow.com') {
+            return res.status(403).json({ error: 'Super Admin account cannot be deleted' });
+        }
+
+        await User.findByIdAndDelete(userId);
 
         // Emit real-time event
         req.app.get('io').emit('user_deleted', { userId });

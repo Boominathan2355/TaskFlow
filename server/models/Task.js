@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const taskSchema = new mongoose.Schema({
+    _id: {
+        type: String,
+        required: true
+    },
     title: {
         type: String,
         required: [true, 'Task title is required'],
@@ -68,10 +72,14 @@ const taskSchema = new mongoose.Schema({
         enum: ['Task', 'Story', 'Bug', 'Change Request', 'Epic', 'Hotfix', 'Maintenance', 'Improvement'],
         default: 'Task'
     },
-    key: {
-        type: String,
-        trim: true
-    }
+    votes: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    watchers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, {
     timestamps: true
 });

@@ -247,18 +247,18 @@ const CreateTaskModal = ({ isOpen, onClose, onCreate, project, initialStage }) =
                                             Task Type <span className="text-destructive ml-1">*</span>
                                         </label>
                                         <select
-                                            className="w-full h-9 rounded-md border border-input bg-background/50 px-3 py-1 text-sm shadow-sm transition-all focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                                            className="w-full h-9 rounded-md border border-border/50 bg-card px-3 py-1 text-sm shadow-sm transition-all focus:ring-1 focus:ring-primary focus:border-primary outline-none cursor-pointer text-foreground"
                                             value={type}
                                             onChange={(e) => setType(e.target.value)}
                                         >
-                                            <option value="Task">Task</option>
-                                            <option value="Story">Story</option>
-                                            <option value="Bug">Bug</option>
-                                            <option value="Change Request">Change Request</option>
-                                            <option value="Epic">Epic</option>
-                                            <option value="Hotfix">Hotfix</option>
-                                            <option value="Maintenance">Maintenance</option>
-                                            <option value="Improvement">Improvement</option>
+                                            <option value="Task" className="bg-card text-foreground">Task</option>
+                                            <option value="Story" className="bg-card text-foreground">Story</option>
+                                            <option value="Bug" className="bg-card text-foreground">Bug</option>
+                                            <option value="Change Request" className="bg-card text-foreground">Change Request</option>
+                                            <option value="Epic" className="bg-card text-foreground">Epic</option>
+                                            <option value="Hotfix" className="bg-card text-foreground">Hotfix</option>
+                                            <option value="Maintenance" className="bg-card text-foreground">Maintenance</option>
+                                            <option value="Improvement" className="bg-card text-foreground">Improvement</option>
                                         </select>
                                     </div>
 
@@ -267,27 +267,26 @@ const CreateTaskModal = ({ isOpen, onClose, onCreate, project, initialStage }) =
                                             Priority <span className="text-destructive ml-1">*</span>
                                         </label>
                                         <select
-                                            className="w-full h-9 rounded-md border border-input bg-background/50 px-3 py-1 text-sm shadow-sm transition-all focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                                            className="w-full h-9 rounded-md border border-border/50 bg-card px-3 py-1 text-sm shadow-sm transition-all focus:ring-1 focus:ring-primary focus:border-primary outline-none cursor-pointer text-foreground"
                                             value={priority}
                                             onChange={(e) => setPriority(e.target.value)}
                                         >
-                                            <option value="Low">Low</option>
-                                            <option value="Medium">Medium</option>
-                                            <option value="High">High</option>
-                                            <option value="Urgent">Urgent</option>
+                                            {['Low', 'Medium', 'High', 'Urgent'].map(p => (
+                                                <option key={p} value={p} className="bg-card text-foreground">{p}</option>
+                                            ))}
                                         </select>
                                     </div>
 
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-foreground/80 uppercase tracking-wider text-[10px]">Assignee</label>
                                         <select
-                                            className="w-full h-9 rounded-md border border-input bg-background/50 px-3 py-1 text-sm shadow-sm transition-all focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                                            className="w-full h-9 rounded-md border border-border/50 bg-card px-3 py-1 text-sm shadow-sm transition-all focus:ring-1 focus:ring-primary focus:border-primary outline-none cursor-pointer text-foreground"
                                             value={assignedTo}
                                             onChange={(e) => setAssignedTo(e.target.value)}
                                         >
-                                            <option value="">Select Assignee...</option>
+                                            <option value="" className="bg-card text-foreground">Select Assignee...</option>
                                             {users.map(u => (
-                                                <option key={u._id} value={u._id}>
+                                                <option key={u._id} value={u._id} className="bg-card text-foreground">
                                                     {u.name}
                                                 </option>
                                             ))}

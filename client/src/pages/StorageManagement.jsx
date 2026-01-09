@@ -170,14 +170,14 @@ const StorageManagement = () => {
                 </div>
                 <div className="flex gap-2">
                     <select
-                        className="h-10 px-4 rounded-xl border border-border/60 bg-background text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        className="h-10 px-4 rounded-xl border border-border/60 bg-card text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer text-foreground"
                         value={filterType}
                         onChange={(e) => setFilterType(e.target.value)}
                     >
-                        <option value="all">All Types</option>
-                        <option value="image">Images</option>
-                        <option value="document">Documents</option>
-                        <option value="other">Other</option>
+                        <option value="all" className="bg-card text-foreground">All Types</option>
+                        <option value="image" className="bg-card text-foreground">Images</option>
+                        <option value="document" className="bg-card text-foreground">Documents</option>
+                        <option value="other" className="bg-card text-foreground">Other</option>
                     </select>
                     <Button variant="outline" size="icon" onClick={fetchFiles} className="h-10 w-10">
                         <Clock className="w-4 h-4" />

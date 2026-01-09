@@ -24,7 +24,7 @@ const notificationSchema = new mongoose.Schema({
         default: ''
     },
     relatedTask: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: String,
         ref: 'Task'
     },
     relatedProject: {

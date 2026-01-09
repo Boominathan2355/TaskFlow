@@ -1,13 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom'; // Using Link since we navigate in the main app
-import { Calendar, CheckCircle2, Clock } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, Layers } from 'lucide-react';
 import { format } from 'date-fns';
 
 // Simple Progress component if not available elsewhere
 const Progress = ({ value, className = "" }) => (
-    <div className={`w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden ${className}`}>
+    <div className={`w-full bg-muted/50 rounded-full h-2 overflow-hidden ${className}`}>
         <div
-            className="bg-blue-600 h-full rounded-full transition-all duration-300 ease-in-out"
+            className="bg-primary h-full rounded-full transition-all duration-300 ease-in-out"
             style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
         />
     </div>
@@ -28,6 +28,9 @@ const ProjectCard = ({ project }) => {
     const overdueTasks = tasks.filter(t =>
         t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done' && t.stage !== 'Done'
     ).length;
+
+    // For backlog, check if stage is 'Backlog'
+    const backlogTasks = tasks.filter(t => t.stage === 'Backlog').length;
 
     const members = project.members || [];
 
@@ -78,6 +81,13 @@ const ProjectCard = ({ project }) => {
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>{completedTasks} done</span>
                         </div>
+
+                        {backlogTasks > 0 && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                                <Layers className="w-3.5 h-3.5 opacity-70" />
+                                <span>{backlogTasks} backlog</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 

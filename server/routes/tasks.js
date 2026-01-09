@@ -6,6 +6,9 @@ const { authenticate } = require('../middleware/auth');
 // All task routes require authentication
 router.use(authenticate);
 
+// Search tasks
+router.get('/utility/search', taskController.searchTasks);
+
 // Get all tasks assigned to the current user
 router.get('/my-tasks', taskController.getMyTasks);
 
@@ -32,5 +35,11 @@ router.delete('/:taskId/comments/:commentId', taskController.deleteComment);
 
 // Add attachment to task
 router.post('/:id/attachments', taskController.addAttachment);
+
+// Vote on task
+router.post('/:id/vote', taskController.toggleVote);
+
+// Watch task
+router.post('/:id/watch', taskController.toggleWatch);
 
 module.exports = router;

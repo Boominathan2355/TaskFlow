@@ -26,10 +26,25 @@ const PRIORITY_VARIANTS = {
     Urgent: 'priority-urgent',
 };
 
+const highlightMentions = (text) => {
+    if (typeof text !== 'string') return text;
+    const parts = text.split(/(@\w+)/g);
+    return parts.map((part, i) =>
+        part.startsWith('@') ? (
+            <span key={i} className="text-primary font-bold bg-primary/10 px-1 rounded mx-0.5">
+                {part}
+            </span>
+        ) : (
+            part
+        )
+    );
+};
+
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { config as appConfig } from '../config';
+import MarkdownToolbar from './MarkdownToolbar';
 
 const TaskModal = ({ task, onClose, onUpdate, project }) => {
     const [currentTask, setCurrentTask] = useState(task);
@@ -41,6 +56,11 @@ const TaskModal = ({ task, onClose, onUpdate, project }) => {
     const [descTab, setDescTab] = useState('write'); // write | preview
     const [commentTab, setCommentTab] = useState('write'); // write | preview
     const [users, setUsers] = useState([]);
+    const [mentionQuery, setMentionQuery] = useState('');
+    const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+    const [mentionStartPos, setMentionStartPos] = useState(null);
+    const commentTextareaRef = React.useRef(null);
+    const descriptionRef = React.useRef(null);
     const { user } = useAuth();
 
     const API_URL = appConfig.API_URL;
@@ -105,11 +125,52 @@ const TaskModal = ({ task, onClose, onUpdate, project }) => {
             const { data } = await taskAPI.addComment(task._id, comment);
             setCurrentTask(data.task);
             setComment('');
+            setShowMentionDropdown(false);
             onUpdate(data.task);
         } catch (err) {
             console.error('Failed to add comment', err);
         }
     };
+
+    // Handle comment input change and detect @mentions
+    const handleCommentChange = (e) => {
+        const value = e.target.value;
+        const cursorPos = e.target.selectionStart;
+        setComment(value);
+
+        // Check for @ mention trigger
+        const textBeforeCursor = value.substring(0, cursorPos);
+        const atMatch = textBeforeCursor.match(/@(\w*)$/);
+
+        if (atMatch) {
+            setMentionQuery(atMatch[1].toLowerCase());
+            setMentionStartPos(cursorPos - atMatch[0].length);
+            setShowMentionDropdown(true);
+        } else {
+            setShowMentionDropdown(false);
+            setMentionQuery('');
+        }
+    };
+
+    // Insert selected mention into comment
+    const insertMention = (userName) => {
+        if (mentionStartPos === null) return;
+        const beforeMention = comment.substring(0, mentionStartPos);
+        const afterCursor = comment.substring(mentionStartPos + mentionQuery.length + 1);
+        const newComment = `${beforeMention}@${userName} ${afterCursor}`;
+        setComment(newComment);
+        setShowMentionDropdown(false);
+        setMentionQuery('');
+        // Focus back on textarea
+        if (commentTextareaRef.current) {
+            commentTextareaRef.current.focus();
+        }
+    };
+
+    // Filter users based on mention query
+    const filteredMentionUsers = users.filter(u =>
+        u.name.toLowerCase().includes(mentionQuery) && u._id !== user?._id
+    ).slice(0, 5);
 
     const handleDeleteTask = async () => {
         if (window.confirm('Are you sure you want to delete this task?')) {
@@ -164,7 +225,20 @@ const TaskModal = ({ task, onClose, onUpdate, project }) => {
     // Shared Markdown Components Config
     const markdownComponents = {
         img: ({ node, ...props }) => <img {...props} className="max-w-full rounded-md shadow-sm my-2" />,
-        p: ({ node, ...props }) => <p {...props} className="mb-2 last:mb-0" />,
+        p: ({ node, children, ...props }) => (
+            <p {...props} className="mb-2 last:mb-0">
+                {React.Children.map(children, child =>
+                    typeof child === 'string' ? highlightMentions(child) : child
+                )}
+            </p>
+        ),
+        li: ({ node, children, ...props }) => (
+            <li {...props}>
+                {React.Children.map(children, child =>
+                    typeof child === 'string' ? highlightMentions(child) : child
+                )}
+            </li>
+        ),
         ul: ({ node, ...props }) => <ul {...props} className="list-disc ml-4 mb-2" />,
         ol: ({ node, ...props }) => <ol {...props} className="list-decimal ml-4 mb-2" />,
         a: ({ node, ...props }) => <a {...props} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer" />,
@@ -293,14 +367,22 @@ const TaskModal = ({ task, onClose, onUpdate, project }) => {
                                         </div>
 
                                         {descTab === 'write' ? (
-                                            <textarea
-                                                className="flex min-h-[150px] w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-y"
-                                                value={editedDesc}
-                                                onChange={(e) => setEditedDesc(e.target.value)}
-                                                onPaste={(e) => handlePaste(e, setEditedDesc, editedDesc)}
-                                                placeholder="Add a more detailed description... (Markdown supported. Paste images to upload)"
-                                                autoFocus
-                                            />
+                                            <div className="flex flex-col">
+                                                <MarkdownToolbar
+                                                    textareaRef={descriptionRef}
+                                                    value={editedDesc}
+                                                    onChange={setEditedDesc}
+                                                />
+                                                <textarea
+                                                    ref={descriptionRef}
+                                                    className="flex min-h-[200px] w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none font-sans leading-relaxed"
+                                                    value={editedDesc}
+                                                    onChange={(e) => setEditedDesc(e.target.value)}
+                                                    onPaste={(e) => handlePaste(e, setEditedDesc, editedDesc)}
+                                                    placeholder="Describe the task... (Markdown supported)"
+                                                    autoFocus
+                                                />
+                                            </div>
                                         ) : (
                                             <div className="min-h-[150px] p-3 text-sm text-foreground prose dark:prose-invert prose-sm max-w-none overflow-y-auto">
                                                 {editedDesc ? (
@@ -374,7 +456,7 @@ const TaskModal = ({ task, onClose, onUpdate, project }) => {
                             </div>
 
                             <div className="space-y-2">
-                                <div className="border border-input rounded-md overflow-hidden bg-background">
+                                <div className="border border-input rounded-md bg-background relative">
                                     <div className="flex items-center justify-between border-b border-input bg-muted/40 p-1">
                                         <div className="flex items-center gap-1">
                                             <button
@@ -395,13 +477,22 @@ const TaskModal = ({ task, onClose, onUpdate, project }) => {
                                     </div>
 
                                     {commentTab === 'write' ? (
-                                        <textarea
-                                            value={comment}
-                                            onChange={(e) => setComment(e.target.value)}
-                                            onPaste={(e) => handlePaste(e, setComment, comment)}
-                                            placeholder="Write a comment... (Markdown supported, Paste images)"
-                                            className="flex min-h-[80px] w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-y"
-                                        />
+                                        <div className="flex flex-col">
+                                            <MarkdownToolbar
+                                                textareaRef={commentTextareaRef}
+                                                value={comment}
+                                                onChange={setComment}
+                                            />
+                                            <textarea
+                                                ref={commentTextareaRef}
+                                                value={comment}
+                                                onChange={handleCommentChange}
+                                                onPaste={(e) => handlePaste(e, setComment, comment)}
+                                                onBlur={() => setTimeout(() => setShowMentionDropdown(false), 200)}
+                                                placeholder="Write a comment... (Use @username to mention, Markdown supported)"
+                                                className="flex min-h-[80px] w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-y"
+                                            />
+                                        </div>
                                     ) : (
                                         <div className="min-h-[80px] p-3 text-sm text-foreground prose dark:prose-invert prose-sm max-w-none">
                                             {comment ? (
@@ -411,6 +502,37 @@ const TaskModal = ({ task, onClose, onUpdate, project }) => {
                                             ) : (
                                                 <span className="text-muted-foreground italic">Nothing to preview</span>
                                             )}
+                                        </div>
+                                    )}
+
+                                    {/* Mention Dropdown - positioned at the bottom of the input box */}
+                                    {showMentionDropdown && filteredMentionUsers.length > 0 && (
+                                        <div className="absolute z-[999] left-2 right-2 top-0 -translate-y-full bg-card border border-border rounded-lg shadow-2xl py-1.5 max-h-52 overflow-y-auto">
+                                            <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border mb-1">
+                                                Mention a user
+                                            </div>
+                                            {filteredMentionUsers.map((u) => (
+                                                <button
+                                                    key={u._id}
+                                                    type="button"
+                                                    onMouseDown={(e) => {
+                                                        e.preventDefault();
+                                                        insertMention(u.name);
+                                                    }}
+                                                    className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent/80 text-left transition-colors cursor-pointer"
+                                                >
+                                                    <Avatar
+                                                        src={u.avatar}
+                                                        fallback={u.name?.charAt(0)}
+                                                        size="sm"
+                                                        className="w-7 h-7 text-xs"
+                                                    />
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="font-medium text-foreground truncate">{u.name}</span>
+                                                        <span className="text-xs text-muted-foreground truncate">{u.email}</span>
+                                                    </div>
+                                                </button>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
@@ -456,18 +578,13 @@ const TaskModal = ({ task, onClose, onUpdate, project }) => {
                         <div className="space-y-3">
                             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</h3>
                             <select
-                                className="w-full h-8 rounded-md border border-input bg-background px-2 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                className="w-full h-8 rounded-md border border-border/50 bg-card px-2 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer text-foreground"
                                 value={currentTask.type || 'Task'}
                                 onChange={(e) => handleUpdateTask({ type: e.target.value })}
                             >
-                                <option value="Task">Task</option>
-                                <option value="Story">Story</option>
-                                <option value="Bug">Bug</option>
-                                <option value="Change Request">Change Request</option>
-                                <option value="Epic">Epic</option>
-                                <option value="Hotfix">Hotfix</option>
-                                <option value="Maintenance">Maintenance</option>
-                                <option value="Improvement">Improvement</option>
+                                {['Task', 'Story', 'Bug', 'Change Request', 'Epic', 'Hotfix', 'Maintenance', 'Improvement'].map(t => (
+                                    <option key={t} value={t} className="bg-card text-foreground">{t}</option>
+                                ))}
                             </select>
                         </div>
 
@@ -508,16 +625,16 @@ const TaskModal = ({ task, onClose, onUpdate, project }) => {
                                 )}
 
                                 <select
-                                    className="w-full h-8 rounded-md border border-input bg-background px-2 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    className="w-full h-8 rounded-md border border-border/50 bg-card px-2 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer text-foreground"
                                     value={currentTask.assignedTo?.[0]?._id || ''}
                                     onChange={(e) => {
                                         const val = e.target.value;
                                         handleUpdateTask({ assignedTo: val ? [val] : [] });
                                     }}
                                 >
-                                    <option value="">Assign to...</option>
+                                    <option value="" className="bg-card text-foreground">Assign to...</option>
                                     {users.map(u => (
-                                        <option key={u._id} value={u._id}>
+                                        <option key={u._id} value={u._id} className="bg-card text-foreground">
                                             {u.name}
                                         </option>
                                     ))}

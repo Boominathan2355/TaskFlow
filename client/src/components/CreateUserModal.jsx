@@ -105,13 +105,13 @@ const CreateUserModal = ({ isOpen, onClose, onCreate }) => {
                             <div className="relative">
                                 <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <select
-                                    className="flex h-11 w-full rounded-lg border border-input bg-transparent pl-10 pr-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="flex h-11 w-full rounded-lg border border-border/50 bg-card pl-10 pr-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer text-foreground"
                                     value={role}
                                     onChange={(e) => setRole(e.target.value)}
                                 >
-                                    <option value="Admin">Admin</option>
-                                    <option value="Member">Member</option>
-                                    <option value="Viewer">Viewer</option>
+                                    <option value="Admin" className="bg-card text-foreground">Admin</option>
+                                    <option value="Member" className="bg-card text-foreground">Member</option>
+                                    <option value="Viewer" className="bg-card text-foreground">Viewer</option>
                                 </select>
                             </div>
                         </div>

@@ -7,7 +7,7 @@ const activityLogSchema = new mongoose.Schema({
         required: true
     },
     task: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: String,
         ref: 'Task'
     },
     user: {

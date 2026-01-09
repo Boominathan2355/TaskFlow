@@ -12,6 +12,8 @@ import UserManagement from './pages/UserManagement';
 import StorageManagement from './pages/StorageManagement';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import CreateTask from './pages/CreateTask';
+import TaskDetail from './pages/TaskDetail';
 
 function App() {
   return (
@@ -31,6 +33,8 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/projects" element={<Navigate to="/" replace />} />
                 <Route path="/projects/:id" element={<ProjectView />} />
+                <Route path="/projects/:id/create-task" element={<CreateTask />} />
+                <Route path="/projects/:id/tasks/:taskId" element={<TaskDetail />} />
                 <Route path="/users" element={<UserManagement />} />
                 <Route path="/storage" element={<StorageManagement />} />
 

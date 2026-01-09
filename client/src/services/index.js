@@ -44,7 +44,10 @@ export const taskAPI = {
     addComment: (taskId, text) => api.post(`/tasks/${taskId}/comments`, { text }),
     deleteComment: (taskId, commentId) =>
         api.delete(`/tasks/${taskId}/comments/${commentId}`),
-    addAttachment: (taskId, data) => api.post(`/tasks/${taskId}/attachments`, data)
+    addAttachment: (taskId, data) => api.post(`/tasks/${taskId}/attachments`, data),
+    toggleVote: (taskId) => api.post(`/tasks/${taskId}/vote`),
+    toggleWatch: (taskId) => api.post(`/tasks/${taskId}/watch`),
+    searchTasks: (query) => api.get('/tasks/utility/search', { params: { query } })
 };
 
 // Notification APIs

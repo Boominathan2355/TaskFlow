@@ -44,6 +44,19 @@ io.on('connection', (socket) => {
         console.log(`User ${socket.id} left project: ${projectId}`);
     });
 
+    socket.on('task_action', (data) => {
+        if (data.projectId) {
+            socket.to(data.projectId).emit('task_action_received', {
+                ...data,
+                user: {
+                    id: socket.id, // Or a real user ID if available
+                    name: data.userName || 'Someone'
+                }
+            });
+            console.log(`Task action ${data.action} relayed for project ${data.projectId}`);
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
     });

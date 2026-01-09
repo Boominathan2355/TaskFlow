@@ -75,7 +75,7 @@ const Dashboard = () => {
             case 'high': return 'bg-red-500/10 text-red-500 border-red-500/20';
             case 'medium': return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
             case 'low': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
-            default: return 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+            default: return 'bg-muted text-muted-foreground border-border/40';
         }
     };
 
@@ -135,47 +135,54 @@ const Dashboard = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/40">
-                                    {myTasks.slice(0, 5).map((task) => (
-                                        <tr key={task._id} className="group hover:bg-muted/20 transition-all cursor-pointer" onClick={() => navigate(`/projects/${task.project?._id}`)}>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-2 h-2 rounded-full ${task.stage === 'Done' ? 'bg-emerald-500' :
-                                                        task.stage === 'In Progress' ? 'bg-blue-500' : 'bg-slate-300'
-                                                        }`} />
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="font-bold text-foreground truncate max-w-[300px]">{task.title}</span>
-                                                        <span className="text-[10px] text-muted-foreground font-black uppercase opacity-60 tracking-wider">
-                                                            {task.key} • {task.stage}
+                                    {myTasks.slice(0, 5).map((task) => {
+                                        const ticketId = task._id;
+                                        return (
+                                            <tr
+                                                key={task._id}
+                                                className="group hover:bg-muted/20 transition-all cursor-pointer"
+                                                onClick={() => navigate(`/projects/${task.project?._id}/tasks/${ticketId}`)}
+                                            >
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-2 h-2 rounded-full ${task.stage === 'Done' ? 'bg-emerald-500' :
+                                                            task.stage === 'In Progress' ? 'bg-blue-500' : 'bg-muted-foreground/30'
+                                                            }`} />
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="font-bold text-foreground truncate max-w-[300px]">{task.title}</span>
+                                                            <span className="text-[10px] text-muted-foreground font-black uppercase opacity-60 tracking-wider">
+                                                                {task.key} • {task.stage}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                                        <Layout className="w-3.5 h-3.5 opacity-50" />
+                                                        <span className="font-medium">{task.project?.title || 'Unknown Project'}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <Badge className={`border px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tighter ${getPriorityColor(task.priority)}`}>
+                                                        {task.priority || 'Medium'}
+                                                    </Badge>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                                        <Calendar className="w-3.5 h-3.5 opacity-50" />
+                                                        <span className="font-medium whitespace-nowrap">
+                                                            {task.dueDate ? format(new Date(task.dueDate), 'MMM d') : 'No date'}
                                                         </span>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2 text-muted-foreground">
-                                                    <Layout className="w-3.5 h-3.5 opacity-50" />
-                                                    <span className="font-medium">{task.project?.title || 'Unknown Project'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Badge className={`border px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tighter ${getPriorityColor(task.priority)}`}>
-                                                    {task.priority || 'Medium'}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2 text-muted-foreground">
-                                                    <Calendar className="w-3.5 h-3.5 opacity-50" />
-                                                    <span className="font-medium whitespace-nowrap">
-                                                        {task.dueDate ? format(new Date(task.dueDate), 'MMM d') : 'No date'}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <ExternalLink className="w-3.5 h-3.5" />
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <ExternalLink className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -211,7 +218,7 @@ const Dashboard = () => {
                         placeholder="Search projects..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-sm rounded-xl"
+                        className="pl-10 bg-muted/50 border-border/50 rounded-xl shadow-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:bg-background focus-visible:border-primary placeholder:text-muted-foreground/50"
                     />
                 </div>
 
