@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
 
         const checkSession = async () => {
             const now = Date.now();
-            const tokenTimestamp = parseInt(sessionStorage.getItem('tokenTimestamp') || '0');
+            const tokenTimestamp = parseInt(localStorage.getItem('tokenTimestamp') || '0');
             const IDLE_TIMEOUT = 60 * 60 * 1000; // 1 hour
             const REFRESH_THRESHOLD = 50 * 60 * 1000; // 50 minutes
 
@@ -48,8 +48,8 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         // Check if user is logged in on mount
-        const token = sessionStorage.getItem('token');
-        const savedUser = sessionStorage.getItem('user');
+        const token = localStorage.getItem('token');
+        const savedUser = localStorage.getItem('user');
 
         if (token && savedUser) {
             setUser(JSON.parse(savedUser));
@@ -75,9 +75,9 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         try {
             const { data } = await authAPI.login({ email, password });
-            sessionStorage.setItem('token', data.token);
-            sessionStorage.setItem('user', JSON.stringify(data.user));
-            sessionStorage.setItem('tokenTimestamp', Date.now().toString());
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            localStorage.setItem('tokenTimestamp', Date.now().toString());
             setUser(data.user);
             setLastActivity(Date.now());
             return { success: true };
@@ -92,9 +92,9 @@ export const AuthProvider = ({ children }) => {
     const signup = async (name, email, password) => {
         try {
             const { data } = await authAPI.signup({ name, email, password });
-            sessionStorage.setItem('token', data.token);
-            sessionStorage.setItem('user', JSON.stringify(data.user));
-            sessionStorage.setItem('tokenTimestamp', Date.now().toString());
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            localStorage.setItem('tokenTimestamp', Date.now().toString());
             setUser(data.user);
             setLastActivity(Date.now());
             return { success: true };
@@ -107,15 +107,15 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = () => {
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('user');
-        sessionStorage.removeItem('tokenTimestamp');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('tokenTimestamp');
         setUser(null);
     };
 
     const updateUserProfile = (updatedUser) => {
         setUser(updatedUser);
-        sessionStorage.setItem('user', JSON.stringify(updatedUser));
+        localStorage.setItem('user', JSON.stringify(updatedUser));
     };
 
     return (
