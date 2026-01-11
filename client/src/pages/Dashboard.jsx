@@ -11,6 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import WelcomeBanner from '../components/molecules/WelcomeBanner';
 import ProjectCard from '../components/molecules/ProjectCard';
 import CreateProjectModal from '../components/organisms/CreateProjectModal';
+import FloatingChatIcon from '../components/atoms/FloatingChatIcon';
+import ChatHub from '../components/organisms/ChatHub';
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -250,6 +252,10 @@ const Dashboard = () => {
                 onClose={() => setIsModalOpen(false)}
                 onCreate={handleCreateProject}
             />
+
+            {/* Floating Chat Icon and Hub */}
+            <FloatingChatIcon />
+            <ChatHub />
         </div>
     );
 };

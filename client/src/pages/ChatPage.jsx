@@ -37,7 +37,7 @@ const ChatPage = () => {
 
     return (
         <>
-            <div className="px-6 pt-6">
+            <div className="px-6 pt-6 hidden md:block">
                 <PageIntro
                     pageKey="chat"
                     title="💬 Team Chat (Beta)"
@@ -46,7 +46,7 @@ const ChatPage = () => {
                     variant="beta"
                 />
             </div>
-            <div className="flex bg-card/60 backdrop-blur-xl border-x border-b border-border/40 overflow-hidden h-[calc(100vh-64px)] animate-in fade-in zoom-in-95 duration-700 mesh-gradient">
+            <div className="flex bg-card/60 backdrop-blur-xl border-x border-b border-border/40 overflow-hidden md:h-[calc(100vh-64px)] h-screen animate-in fade-in zoom-in-95 duration-700 mesh-gradient">
                 {/* Sidebar / Chat List */}
                 <div className={`w-full md:w-[320px] lg:w-[380px] border-r border-border/30 flex flex-col transition-all duration-500 glass-panel ${selectedChat ? 'hidden md:flex' : 'flex'}`}>
                     <ChatList />

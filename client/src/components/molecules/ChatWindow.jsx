@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Send, MoreVertical, Paperclip, Smile, Users } from 'lucide-react';
+import EmojiPicker from 'emoji-picker-react';
 import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
@@ -11,7 +12,13 @@ const ChatWindow = () => {
     const [newMessage, setNewMessage] = useState("");
     const [isTyping, setIsTyping] = useState(false);
     const [typing, setTyping] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
     const messagesEndRef = useRef(null);
+    const menuRef = useRef(null);
+    const emojiRef = useRef(null);
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         if (selectedChat) {
@@ -38,6 +45,30 @@ const ChatWindow = () => {
             };
         }
     }, [socket, selectedChat]);
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setShowMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Close emoji picker when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (emojiRef.current && !emojiRef.current.contains(event.target)) {
+                setShowEmojiPicker(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -69,6 +100,15 @@ const ChatWindow = () => {
                 setTyping(false);
             }
         }, timerLength);
+    };
+
+    const handleFileSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            // For now, just show an alert. In production, you'd upload the file
+            alert(`File selected: ${file.name}\nSize: ${(file.size / 1024).toFixed(2)} KB\nType: ${file.type}\n\nNote: File upload feature coming soon!`);
+        }
     };
 
     const getSender = (users) => {
@@ -129,10 +169,56 @@ const ChatWindow = () => {
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-1">
-                    <button className="p-2.5 hover:bg-secondary rounded-xl transition-all text-muted-foreground hover:text-foreground">
+                <div className="flex items-center gap-1 relative" ref={menuRef}>
+                    <button
+                        onClick={() => setShowMenu(!showMenu)}
+                        className="p-2.5 hover:bg-secondary rounded-xl transition-all text-muted-foreground hover:text-foreground"
+                    >
                         <MoreVertical size={20} />
                     </button>
+
+                    {showMenu && (
+                        <div className="absolute right-0 top-12 w-56 glass-panel border border-border/40 rounded-2xl shadow-2xl shadow-black/20 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="py-2">
+                                <button
+                                    onClick={() => {
+                                        setShowMenu(false);
+                                        // Add view profile functionality here
+                                        console.log('View profile clicked');
+                                    }}
+                                    className="w-full px-4 py-2.5 text-left text-sm hover:bg-secondary/50 transition-colors flex items-center gap-3"
+                                >
+                                    <Users size={16} className="text-muted-foreground" />
+                                    <span>View {selectedChat.isGroupChat ? 'Group' : 'Profile'}</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowMenu(false);
+                                        // Add mute functionality here
+                                        console.log('Mute chat clicked');
+                                    }}
+                                    className="w-full px-4 py-2.5 text-left text-sm hover:bg-secondary/50 transition-colors flex items-center gap-3"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d="M11 5 6 9H2v6h4l5 4V5Z" /><line x1="22" x2="16" y1="9" y2="15" /><line x1="16" x2="22" y1="9" y2="15" /></svg>
+                                    <span>Mute Chat</span>
+                                </button>
+                                <div className="h-px bg-border/40 my-2" />
+                                <button
+                                    onClick={() => {
+                                        setShowMenu(false);
+                                        if (confirm('Are you sure you want to clear all messages? This cannot be undone.')) {
+                                            // Add clear messages functionality here
+                                            console.log('Clear messages clicked');
+                                        }
+                                    }}
+                                    className="w-full px-4 py-2.5 text-left text-sm hover:bg-destructive/10 text-destructive transition-colors flex items-center gap-3"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                                    <span>Clear Messages</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -201,8 +287,16 @@ const ChatWindow = () => {
                         className="flex items-center gap-2"
                     >
                         <div className="flex items-center">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                className="hidden"
+                                onChange={handleFileSelect}
+                                accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                            />
                             <button
                                 type="button"
+                                onClick={() => fileInputRef.current?.click()}
                                 className="p-3 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-2xl transition-all"
                             >
                                 <Paperclip size={20} />
@@ -215,21 +309,37 @@ const ChatWindow = () => {
                             value={newMessage}
                             onChange={typingHandler}
                         />
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 relative" ref={emojiRef}>
                             <button
                                 type="button"
+                                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                                 className="p-3 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-2xl transition-all hidden sm:flex"
                             >
                                 <Smile size={20} />
                             </button>
-                            <button
-                                type="submit"
-                                disabled={!newMessage.trim()}
-                                className="p-3 bg-primary text-primary-foreground rounded-2xl shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 transition-all font-bold group"
-                            >
-                                <Send size={20} className="transition-transform group-hover:rotate-12" />
-                            </button>
+
+                            {showEmojiPicker && (
+                                <div className="absolute bottom-14 right-0 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                    <EmojiPicker
+                                        onEmojiClick={(emojiObject) => {
+                                            setNewMessage(prev => prev + emojiObject.emoji);
+                                            setShowEmojiPicker(false);
+                                        }}
+                                        searchDisabled={false}
+                                        skinTonesDisabled={false}
+                                        width={350}
+                                        height={450}
+                                    />
+                                </div>
+                            )}
                         </div>
+                        <button
+                            type="submit"
+                            disabled={!newMessage.trim()}
+                            className="p-3 bg-primary text-primary-foreground rounded-2xl shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 transition-all font-bold group"
+                        >
+                            <Send size={20} className="transition-transform group-hover:rotate-12" />
+                        </button>
                     </form>
                 </div>
             </div>
