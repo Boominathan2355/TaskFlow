@@ -39,7 +39,11 @@ export const ChatProvider = ({ children }) => {
             const { data } = await axios.get(`${config.API_URL}/api/chat`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setChats(data);
+            // Remove duplicates based on _id
+            const uniqueChats = data.filter((chat, index, self) =>
+                index === self.findIndex((c) => c._id === chat._id)
+            );
+            setChats(uniqueChats);
             setLoading(false);
         } catch (error) {
             console.error("Error fetching chats", error);
@@ -106,7 +110,11 @@ export const ChatProvider = ({ children }) => {
             });
 
             socket.on("new_chat_received", (newChat) => {
-                setChats(prev => [newChat, ...prev]);
+                setChats(prev => {
+                    // Prevent duplicates
+                    if (prev.find(c => c._id === newChat._id)) return prev;
+                    return [newChat, ...prev];
+                });
             });
 
             // Browser notification permission
