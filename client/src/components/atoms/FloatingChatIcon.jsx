@@ -8,7 +8,7 @@ const FloatingChatIcon = () => {
     return (
         <button
             onClick={toggleChatHub}
-            className={`fixed bottom-6 right-6 p-4 rounded-full shadow-lg transition-all duration-300 z-[100] flex items-center justify-center
+            className={`fixed bottom-6 right-6 p-4 rounded-full shadow-lg transition-all duration-300 z-[100] flex items-center justify-center md:hidden
                 ${isChatHubOpen
                     ? 'bg-secondary text-secondary-foreground hover:bg-muted'
                     : 'bg-primary text-primary-foreground hover:scale-110'}`}
