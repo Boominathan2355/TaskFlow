@@ -103,6 +103,18 @@ export const CallProvider = ({ children }) => {
                 });
                 setPeers(peers);
             });
+
+            // Handle Remote End Call
+            socket.on("end_call", () => {
+                leaveCall(false); // End local call without emitting
+            });
+
+            // Handle Call Answered Elsewhere (Same User, Different Device)
+            socket.on("stop_ringing_self", () => {
+                soundManager.stopRing();
+                setIsReceivingCall(false);
+                setIncomingCall(null);
+            });
         }
     }, [socket, user, stream]); // Stream dependency crucial for addPeer/createPeer
 
@@ -200,6 +212,8 @@ export const CallProvider = ({ children }) => {
         soundManager.stopRing();
         setCallAccepted(true);
         setIsReceivingCall(false);
+        setIncomingCall(null); // Clear incoming UI immediately
+
         const video = incomingCall?.isVideo;
         const chatId = incomingCall?.chatId;
 
@@ -207,6 +221,12 @@ export const CallProvider = ({ children }) => {
 
         if (chatId) {
             chatIdRef.current = chatId; // Store chat ID
+
+            // Notify other devices to stop ringing
+            if (socket && user) {
+                socket.emit("call_answered_by_user", { userId: user._id });
+            }
+
             joinCall(chatId, video);
         } else {
             console.error("No Chat ID in incoming call");
@@ -215,6 +235,11 @@ export const CallProvider = ({ children }) => {
 
     const leaveCall = async (endCall = false) => {
         soundManager.stopRing();
+
+        // Emit End Call to others if initiator
+        if (endCall && socket && chatIdRef.current) {
+            socket.emit("end_call", { roomID: chatIdRef.current });
+        }
 
         // Log Call Duration
         if (callAccepted && callStartTime.current && chatIdRef.current) {

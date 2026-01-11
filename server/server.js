@@ -172,8 +172,17 @@ io.on('connection', (socket) => {
         io.to(data.userToCall).emit("received_signal", { signal: data.signal, from: data.from });
     });
 
+    // Handle Call Answered (Sync across devices)
+    socket.on("call_answered_by_user", ({ userId }) => {
+        // Broadcast to all other sockets of this user to stop ringing
+        socket.to(userId).emit("stop_ringing_self");
+    });
+
     socket.on("end_call", (data) => {
-        if (data && data.to) {
+        if (data && data.roomID) {
+            // Broadcast to the whole room (including sender if needed, but usually sender handles local)
+            socket.to(data.roomID).emit("end_call");
+        } else if (data && data.to) {
             io.to(data.to).emit("call_ended");
         }
     });
