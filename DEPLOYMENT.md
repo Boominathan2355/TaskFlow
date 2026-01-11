@@ -2,81 +2,63 @@
 
 ## Deployment Architecture
 
-- **Frontend:** Render (Static Site)
-- **Backend:** Vercel (Serverless Functions)
-
-> [!WARNING]
-> **Socket.io Real-Time Features Not Available**
-> 
-> Vercel's serverless architecture doesn't support persistent WebSocket connections. Real-time chat, live notifications, and instant task updates will not work. All REST API endpoints function normally.
+Both **frontend** and **backend** are deployed on **Render** to support full Socket.io real-time features.
 
 ```
 ┌─────────────────────┐         ┌─────────────────────┐
 │                     │         │                     │
-│  Render             │  HTTPS  │  Vercel             │
-│  (Static Frontend)  │────────▶│  (Serverless API)   │
-│                     │         │  (No Socket.io)     │
+│  Render             │  HTTPS  │  Render             │
+│  (Static Frontend)  │────────▶│  (Node.js Backend)  │
+│                     │         │  + Socket.io ✅     │
 └─────────────────────┘         └─────────────────────┘
 ```
 
 ---
 
-## 🚀 Backend Deployment (Vercel)
+## 🚀 Deployment Steps
 
-### Step 1: Deploy to Vercel
+### Step 1: Push to GitHub
 
-**Option A: Vercel CLI**
 ```bash
-npm i -g vercel
-cd d:\Product
-vercel --prod
+git add .
+git commit -m "Configure Render deployment for both services"
+git push
 ```
 
-**Option B: Vercel Dashboard**
-1. Go to [vercel.com/new](https://vercel.com/new)
-2. Import your Git repository
-3. Vercel auto-detects `vercel.json`
-4. Deploy
+### Step 2: Deploy via Render Blueprint
 
-### Step 2: Configure Environment Variables
+1. Go to [dashboard.render.com](https://dashboard.render.com)
+2. Click "New" → "Blueprint"
+3. Connect your GitHub repository
+4. Render will automatically detect `render.yaml` and create both services
 
-Add these in Vercel project settings:
+### Step 3: Configure Environment Variables
+
+#### Backend Service
 
 | Variable | Example |
 |----------|---------|
 | `MONGODB_URI` | `mongodb+srv://user:pass@cluster.mongodb.net/taskflow` |
 | `JWT_SECRET` | `your-secret-key` |
 | `CLIENT_URL` | `https://taskflow-frontend.onrender.com` |
+| `NODE_ENV` | `production` (auto-set) |
+| `PORT` | `10000` (auto-set) |
 
-### Step 3: Save Backend URL
+#### Frontend Service
 
-Example: `https://taskflow-backend.vercel.app`
+| Variable | Example |
+|----------|---------|
+| `VITE_API_URL` | `https://taskflow-backend.onrender.com` |
 
----
+### Step 4: Update Cross-References
 
-## 🎨 Frontend Deployment (Render)
+After both services are deployed:
 
-### Step 1: Update Environment Variable
-
-Set `VITE_API_URL` in `client/.env.production`:
-```bash
-VITE_API_URL=https://your-backend.vercel.app
-```
-
-### Step 2: Deploy to Render
-
-1. Go to [dashboard.render.com](https://dashboard.render.com)
-2. Click "New" → "Static Site"
-3. Connect your Git repository
-4. Render auto-detects `render.yaml`
-5. Add environment variable:
-   - Key: `VITE_API_URL`
-   - Value: Your Vercel backend URL
-6. Deploy
-
-### Step 3: Update Backend CORS
-
-Update `CLIENT_URL` in Vercel with your Render frontend URL and redeploy.
+1. Get backend URL (e.g., `https://taskflow-backend.onrender.com`)
+2. Update frontend `VITE_API_URL` environment variable
+3. Get frontend URL (e.g., `https://taskflow-frontend.onrender.com`)
+4. Update backend `CLIENT_URL` environment variable
+5. Redeploy both services
 
 ---
 
@@ -84,41 +66,54 @@ Update `CLIENT_URL` in Vercel with your Render frontend URL and redeploy.
 
 ### Test Backend
 ```bash
-curl https://your-backend.vercel.app/api/health
+curl https://taskflow-backend.onrender.com/api/health
 ```
 
 ### Test Frontend
-1. Visit your Render URL
-2. Test login and basic features
-3. Check browser console for errors
+1. Visit your frontend URL
+2. Test login and features
+3. Test real-time chat ✅
+4. Test live notifications ✅
 
 ---
 
-## 📝 Configuration Files
+## 📝 Services Overview
 
-- [`render.yaml`](file:///d:/Product/render.yaml) - Frontend deployment
-- [`vercel.json`](file:///d:/Product/vercel.json) - Backend deployment
-- [`api/index.js`](file:///d:/Product/api/index.js) - Serverless entry point
-- [`client/.env.production`](file:///d:/Product/client/.env.production) - Production env vars
+### Frontend Service
+- **Type:** Static Site
+- **Build:** `cd client && npm install && npm run build`
+- **Publish:** `./client/dist`
+
+### Backend Service
+- **Type:** Web Service (Node.js)
+- **Build:** `cd server && npm install`
+- **Start:** `cd server && npm start`
+- **Port:** 10000
+- **Features:** REST API + Socket.io WebSockets ✅
+
+---
+
+## 🔧 Configuration
+
+- [`render.yaml`](file:///d:/Product/render.yaml) - Defines both services
 
 ---
 
 ## 🐛 Troubleshooting
 
+**Services sleeping (Free Tier)**
+- Free tier services sleep after 15 minutes of inactivity
+- First request after sleep takes ~30 seconds to wake up
+
 **Frontend can't connect to backend**
 - Check `VITE_API_URL` is set correctly
-- Verify backend is accessible
+- Verify backend is running
 - Check CORS configuration
-
-**Backend errors**
-- Verify environment variables in Vercel
-- Check MongoDB connection
-- Review Vercel function logs
 
 ---
 
 ## 📚 Resources
 
 - [Render Documentation](https://render.com/docs)
-- [Vercel Documentation](https://vercel.com/docs)
+- [Render Blueprints](https://render.com/docs/blueprint-spec)
 - [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
