@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import Button from './ui/Button';
-import Input from './ui/Input';
+import Button from '../atoms/Button';
+import Input from '../atoms/Input';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { uploadAPI } from '../services';
+import { uploadAPI } from '../../services';
 
 const COLORS = [
     '#3B82F6', // Blue
@@ -16,7 +16,7 @@ const COLORS = [
     '#6366F1', // Indigo
 ];
 
-import { config as appConfig } from '../config';
+import { config as appConfig } from '../../config';
 
 const CreateProjectModal = ({ isOpen, onClose, onCreate }) => {
     const [title, setTitle] = useState('');

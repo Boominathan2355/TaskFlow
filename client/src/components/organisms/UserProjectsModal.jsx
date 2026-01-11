@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check, Box, Loader2, AlertCircle } from 'lucide-react';
-import Button from './ui/Button';
-import { projectAPI } from '../services';
+import Button from '../atoms/Button';
+import { projectAPI } from '../../services';
 
 const UserProjectsModal = ({ isOpen, onClose, user }) => {
     const [allProjects, setAllProjects] = useState([]);

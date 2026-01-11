@@ -65,19 +65,19 @@ const ProjectCard = ({ project }) => {
                     </div>
 
                     <div className="flex items-center gap-4 text-xs mb-6">
-                        <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                        <div className="flex items-center gap-1 text-info">
                             <Clock className="w-3.5 h-3.5" />
                             <span>{activeTasks} active</span>
                         </div>
 
                         {overdueTasks > 0 && (
-                            <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                            <div className="flex items-center gap-1 text-destructive">
                                 <Calendar className="w-3.5 h-3.5" />
                                 <span>{overdueTasks} overdue</span>
                             </div>
                         )}
 
-                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                        <div className="flex items-center gap-1 text-success">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>{completedTasks} done</span>
                         </div>

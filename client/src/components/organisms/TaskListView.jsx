@@ -1,8 +1,8 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { AlertCircle, MessageSquare, Paperclip } from 'lucide-react';
-import Badge from './ui/Badge';
-import Avatar from './ui/Avatar';
+import Badge from '../atoms/Badge';
+import Avatar from '../atoms/Avatar';
 
 const TaskListView = ({ tasks, onTaskClick }) => {
     if (tasks.length === 0) {

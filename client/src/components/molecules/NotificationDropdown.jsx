@@ -131,7 +131,7 @@ const NotificationDropdown = () => {
                                         onClick={() => !notif.read && handleMarkAsRead(notif._id)}
                                     >
                                         <div className="flex gap-3">
-                                            <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${!notif.read ? 'bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-transparent'}`}></div>
+                                            <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${!notif.read ? 'bg-destructive shadow-sm shadow-destructive/50' : 'bg-transparent'}`}></div>
                                             <div className="flex-1 space-y-1">
                                                 <p className="font-medium leading-none">{notif.title}</p>
                                                 <p className="text-muted-foreground line-clamp-2">{notif.message}</p>

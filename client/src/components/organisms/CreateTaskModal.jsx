@@ -2,11 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import Button from './ui/Button';
-import Input from './ui/Input';
-import { uploadAPI, userAPI } from '../services';
+import Link from 'react-router-dom'; // Using Link since we navigate in the main app
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, AlertCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import Button from '../atoms/Button';
+import Input from '../atoms/Input';
+import { uploadAPI, userAPI } from '../../services';
 
-import { config as appConfig } from '../config';
+import { config as appConfig } from '../../config';
 
 const CreateTaskModal = ({ isOpen, onClose, onCreate, project, initialStage }) => {
     const [title, setTitle] = useState('');
@@ -167,7 +172,7 @@ const CreateTaskModal = ({ isOpen, onClose, onCreate, project, initialStage }) =
                 <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
                     <div className="flex-1 overflow-y-auto p-6">
                         {error && (
-                            <div className="mb-6 bg-destructive/10 text-destructive text-sm p-3 rounded-md flex items-center gap-2">
+                            <div className="mb-6 bg-destructive/10 text-destructive text-sm p-3 rounded-md flex items-center gap-2 border border-destructive/20">
                                 <AlertCircle className="w-4 h-4" />
                                 {error}
                             </div>

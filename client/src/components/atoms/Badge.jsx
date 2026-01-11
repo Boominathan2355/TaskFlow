@@ -7,11 +7,15 @@ const Badge = ({ children, variant = 'default', className, ...props }) => {
         default: 'bg-primary text-primary-foreground hover:bg-primary/80',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         outline: 'text-foreground border border-border',
-        destructive: 'bg-destructive/10 text-destructive hover:bg-destructive/20',
-        'priority-low': 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-        'priority-medium': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-        'priority-high': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-        'priority-urgent': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+        destructive: 'bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20',
+        success: 'bg-success/10 text-success hover:bg-success/20 border-success/20',
+        warning: 'bg-warning/10 text-warning hover:bg-warning/20 border-warning/20',
+        info: 'bg-info/10 text-info hover:bg-info/20 border-info/20',
+        neutral: 'bg-neutral/10 text-neutral hover:bg-neutral/20 border-neutral/20',
+        'priority-low': 'bg-priority-low/10 text-priority-low border-priority-low/20',
+        'priority-medium': 'bg-priority-medium/10 text-priority-medium border-priority-medium/20',
+        'priority-high': 'bg-priority-high/10 text-priority-high border-priority-high/20',
+        'priority-urgent': 'bg-priority-urgent/10 text-priority-urgent border-priority-urgent/20',
     };
 
     return (

@@ -29,14 +29,14 @@ import {
     Share2,
     Download
 } from 'lucide-react';
-import Button from '../components/ui/Button';
-import Badge from '../components/ui/Badge';
-import Avatar from '../components/ui/Avatar';
-import Input from '../components/ui/Input';
+import Button from '../components/atoms/Button';
+import Badge from '../components/atoms/Badge';
+import Avatar from '../components/atoms/Avatar';
+import Input from '../components/atoms/Input';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { config as appConfig } from '../config';
-import MarkdownToolbar from '../components/MarkdownToolbar';
+import MarkdownToolbar from '../components/molecules/MarkdownToolbar';
 import TurndownService from 'turndown';
 
 const turndownService = new TurndownService({

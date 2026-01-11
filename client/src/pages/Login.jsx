@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
+import Input from '../components/atoms/Input';
+import Button from '../components/atoms/Button';
 
 const Login = () => {
     const [email, setEmail] = useState('');

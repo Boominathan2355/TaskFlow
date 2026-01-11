@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
+import Input from '../components/atoms/Input';
+import Button from '../components/atoms/Button';
 import { useTheme } from '../contexts/ThemeContext';
 import { Mail, ArrowLeft, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 

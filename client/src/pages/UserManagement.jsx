@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { userAPI } from '../services';
-import Button from '../components/ui/Button';
-import Badge from '../components/ui/Badge';
-import Avatar from '../components/ui/Avatar';
-import Input from '../components/ui/Input';
-import CreateUserModal from '../components/CreateUserModal';
-import UserProjectsModal from '../components/UserProjectsModal';
+import Button from '../components/atoms/Button';
+import Badge from '../components/atoms/Badge';
+import Avatar from '../components/atoms/Avatar';
+import Input from '../components/atoms/Input';
+import CreateUserModal from '../components/organisms/CreateUserModal';
+import UserProjectsModal from '../components/organisms/UserProjectsModal';
 import { useSocket } from '../contexts/SocketContext';
 import {
     Trash2,
@@ -130,7 +130,7 @@ const UserManagement = () => {
     const getRoleIcon = (role) => {
         switch (role) {
             case 'Admin': return <ShieldCheck className="w-4 h-4 text-primary" />;
-            case 'Member': return <CheckCircle2 className="w-4 h-4 text-blue-500" />;
+            case 'Member': return <CheckCircle2 className="w-4 h-4 text-info" />;
             case 'Viewer': return <Users className="w-4 h-4 text-muted-foreground" />;
             default: return null;
         }
@@ -176,19 +176,19 @@ const UserManagement = () => {
                     label="Administrators"
                     value={stats.admins}
                     icon={<ShieldCheck className="w-5 h-5" />}
-                    color="bg-amber-500/10 text-amber-600"
+                    color="bg-primary/10 text-primary"
                 />
                 <StatCard
                     label="Team Members"
                     value={stats.members}
                     icon={<CheckCircle2 className="w-5 h-5" />}
-                    color="bg-blue-500/10 text-blue-600"
+                    color="bg-info/10 text-info"
                 />
                 <StatCard
                     label="Viewers"
                     value={stats.viewers}
                     icon={<Users className="w-5 h-5" />}
-                    color="bg-slate-500/10 text-slate-600"
+                    color="bg-muted text-muted-foreground"
                 />
             </div>
 

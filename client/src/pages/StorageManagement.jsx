@@ -18,9 +18,9 @@ import {
     CheckCircle2
 } from 'lucide-react';
 import { storageAPI } from '../services';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Badge from '../components/ui/Badge';
+import Button from '../components/atoms/Button';
+import Input from '../components/atoms/Input';
+import Badge from '../components/atoms/Badge';
 import { format } from 'date-fns';
 
 const StorageManagement = () => {
@@ -86,11 +86,11 @@ const StorageManagement = () => {
     };
 
     const getFileIcon = (mimetype) => {
-        if (mimetype.startsWith('image/')) return <ImageIcon className="w-4 h-4 text-blue-500" />;
-        if (mimetype.startsWith('video/')) return <Film className="w-4 h-4 text-purple-500" />;
+        if (mimetype.startsWith('image/')) return <ImageIcon className="w-4 h-4 text-info" />;
+        if (mimetype.startsWith('video/')) return <Film className="w-4 h-4 text-primary" />;
         if (mimetype.startsWith('text/') || mimetype.includes('pdf') || mimetype.includes('word'))
-            return <FileText className="w-4 h-4 text-emerald-500" />;
-        return <File className="w-4 h-4 text-slate-400" />;
+            return <FileText className="w-4 h-4 text-success" />;
+        return <File className="w-4 h-4 text-muted-foreground" />;
     };
 
     const filteredFiles = files.filter(file => {
@@ -141,9 +141,9 @@ const StorageManagement = () => {
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
-                    { label: 'Images', count: files.filter(f => f.mimetype.startsWith('image/')).length, icon: ImageIcon, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                    { label: 'Documents', count: files.filter(f => f.mimetype.includes('pdf') || f.mimetype.includes('word') || f.mimetype.startsWith('text/')).length, icon: FileText, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                    { label: 'Remaining', count: files.filter(f => !f.mimetype.startsWith('image/') && !f.mimetype.includes('pdf') && !f.mimetype.includes('word') && !f.mimetype.startsWith('text/')).length, icon: File, color: 'text-slate-500', bg: 'bg-slate-500/10' }
+                    { label: 'Images', count: files.filter(f => f.mimetype.startsWith('image/')).length, icon: ImageIcon, color: 'text-info', bg: 'bg-info/10' },
+                    { label: 'Documents', count: files.filter(f => f.mimetype.includes('pdf') || f.mimetype.includes('word') || f.mimetype.startsWith('text/')).length, icon: FileText, color: 'text-success', bg: 'bg-success/10' },
+                    { label: 'Remaining', count: files.filter(f => !f.mimetype.startsWith('image/') && !f.mimetype.includes('pdf') && !f.mimetype.includes('word') && !f.mimetype.startsWith('text/')).length, icon: File, color: 'text-muted-foreground', bg: 'bg-muted' }
                 ].map((stat, i) => (
                     <div key={i} className="bg-card border border-border/60 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all group">
                         <div className="flex items-center justify-between">

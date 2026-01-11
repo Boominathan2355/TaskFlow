@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User as UserIcon, Shield, AlertCircle } from 'lucide-react';
-import Button from './ui/Button';
-import Input from './ui/Input';
+import Button from '../atoms/Button';
+import Input from '../atoms/Input';
 
 const CreateUserModal = ({ isOpen, onClose, onCreate }) => {
     const [name, setName] = useState('');

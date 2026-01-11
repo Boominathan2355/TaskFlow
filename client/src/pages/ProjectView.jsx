@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { projectAPI, taskAPI } from '../services';
-import KanbanBoard from '../components/kanban/KanbanBoard';
-import TaskListView from '../components/TaskListView';
-import ActivityLog from '../components/ActivityLog';
+import KanbanBoard from '../components/organisms/KanbanBoard';
+import TaskListView from '../components/organisms/TaskListView';
+import ActivityLog from '../components/organisms/ActivityLog';
 import { Search, LayoutGrid, List, Activity } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
-import ProjectSettingsModal from '../components/ProjectSettingsModal';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/atoms/Tabs';
+import ProjectSettingsModal from '../components/organisms/ProjectSettingsModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
-import Button from '../components/ui/Button';
+import Button from '../components/atoms/Button';
 import { Settings } from 'lucide-react';
 
 const ProjectView = () => {

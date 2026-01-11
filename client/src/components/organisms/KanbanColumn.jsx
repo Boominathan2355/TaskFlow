@@ -1,31 +1,31 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import TaskCard from './TaskCard';
+import TaskCard from '../molecules/TaskCard';
 import { Plus } from 'lucide-react';
-import Button from '../ui/Button';
+import Button from '../atoms/Button';
 
 // Refined colors to match the design screenshot
 const STAGE_STYLES = {
     'Backlog': {
-        wrapper: 'bg-gray-50/80 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800',
-        header: 'text-gray-700 dark:text-gray-300',
-        badge: 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+        wrapper: 'bg-muted/30 border-border/50',
+        header: 'text-muted-foreground',
+        badge: 'bg-muted text-muted-foreground'
     },
     'In Progress': {
-        wrapper: 'bg-blue-50/80 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30',
-        header: 'text-blue-700 dark:text-blue-300',
-        badge: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+        wrapper: 'bg-info/5 dark:bg-info/10 border-info/20',
+        header: 'text-info',
+        badge: 'bg-info/10 text-info'
     },
     'Review': {
-        wrapper: 'bg-purple-50/80 dark:bg-purple-900/10 border-purple-100 dark:border-purple-900/30',
-        header: 'text-purple-700 dark:text-purple-300',
-        badge: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'
+        wrapper: 'bg-warning/5 dark:bg-warning/10 border-warning/20',
+        header: 'text-warning',
+        badge: 'bg-warning/10 text-warning'
     },
     'Done': {
-        wrapper: 'bg-green-50/80 dark:bg-green-900/10 border-green-100 dark:border-green-900/30',
-        header: 'text-green-700 dark:text-green-300',
-        badge: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+        wrapper: 'bg-success/5 dark:bg-success/10 border-success/20',
+        header: 'text-success',
+        badge: 'bg-success/10 text-success'
     },
 };
 

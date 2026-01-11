@@ -9,6 +9,9 @@ router.use(authenticate);
 // Get all users (Admin only)
 router.get('/', isAdmin, userController.getAllUsers);
 
+// Search users
+router.get('/search', userController.searchUsers);
+
 // Create user (Admin only)
 router.post('/', isAdmin, userController.createUser);
 

@@ -10,7 +10,7 @@ import {
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import KanbanColumn from './KanbanColumn';
-import TaskCard from './TaskCard';
+import TaskCard from '../molecules/TaskCard';
 
 const KanbanBoard = ({ tasks, stages, onTaskMove, onTaskClick, onAddTask }) => {
     const [activeTask, setActiveTask] = useState(null);

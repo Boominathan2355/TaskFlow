@@ -14,48 +14,49 @@ export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const { user } = useAuth();
 
-    useEffect(() => {
-        let activeSocket = null;
+    const socketRef = React.useRef(null);
 
-        // Detect if we are running on Vercel automatically
+    useEffect(() => {
         const isVercel = window.location.hostname.includes('vercel.app');
         const shouldDisableSocket = import.meta.env.VITE_DISABLE_SOCKET === 'true' || isVercel;
 
-        if (user && !shouldDisableSocket) {
+        if (user && !shouldDisableSocket && !socketRef.current) {
             const socketUrl = config.API_URL || undefined;
 
-            activeSocket = io(socketUrl, {
+            const activeSocket = io(socketUrl, {
                 path: '/socket.io',
-                transports: ['polling', 'websocket'],
-                upgrade: true,
-                autoConnect: true,
-                reconnectionAttempts: 5, // Limit retries to stop console spam on Vercel
-                timeout: 10000
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: 10,
+                reconnectionDelay: 1000,
+                autoConnect: true
             });
 
             activeSocket.on('connect', () => {
                 console.log('Socket Connected:', activeSocket.id);
-                activeSocket.emit('join_user', user._id || user.id);
+                activeSocket.emit('setup', user);
             });
 
             activeSocket.on('connect_error', (err) => {
-                // Only log if not on Vercel or explicitly enabled, to keep console clean
                 if (!isVercel) {
                     console.error('Socket Connection Error:', err.message);
                 }
             });
 
+            socketRef.current = activeSocket;
             setSocket(activeSocket);
         }
 
         return () => {
-            if (activeSocket) {
-                console.log('Disconnecting socket...');
-                activeSocket.disconnect();
+            // Only disconnect if user logged out or explicitly disabling
+            if ((!user || shouldDisableSocket) && socketRef.current) {
+                socketRef.current.off();
+                socketRef.current.disconnect();
+                socketRef.current = null;
+                setSocket(null);
             }
-            setSocket(null);
         };
-    }, [user]);
+    }, [user?._id || user?.id]);
 
     return (
         <SocketContext.Provider value={socket}>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { taskAPI, uploadAPI, userAPI } from '../services';
-import { useAuth } from '../contexts/AuthContext';
+import { taskAPI, uploadAPI, userAPI } from '../../services';
+import { useAuth } from '../../contexts/AuthContext';
 import { format } from 'date-fns';
 import {
     Calendar,
@@ -14,10 +14,10 @@ import {
     MessageSquare,
     Clock
 } from 'lucide-react';
-import Button from './ui/Button';
-import Badge from './ui/Badge';
-import Avatar from './ui/Avatar';
-import Input from './ui/Input';
+import Button from '../atoms/Button';
+import Badge from '../atoms/Badge';
+import Avatar from '../atoms/Avatar';
+import Input from '../atoms/Input';
 
 const PRIORITY_VARIANTS = {
     Low: 'priority-low',
@@ -43,8 +43,8 @@ const highlightMentions = (text) => {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-import { config as appConfig } from '../config';
-import MarkdownToolbar from './MarkdownToolbar';
+import { config as appConfig } from '../../config';
+import MarkdownToolbar from '../molecules/MarkdownToolbar';
 
 const TaskModal = ({ task, onClose, onUpdate, project }) => {
     const [currentTask, setCurrentTask] = useState(task);

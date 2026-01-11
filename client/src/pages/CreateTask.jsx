@@ -3,13 +3,13 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Calendar, AlertCircle, FileText, Tag, Flag, User, Layers } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Avatar from '../components/ui/Avatar';
+import Button from '../components/atoms/Button';
+import Input from '../components/atoms/Input';
+import Avatar from '../components/atoms/Avatar';
 import { uploadAPI, userAPI, projectAPI, taskAPI } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 import { config as appConfig } from '../config';
-import MarkdownToolbar from '../components/MarkdownToolbar';
+import MarkdownToolbar from '../components/molecules/MarkdownToolbar';
 
 const PRIORITY_VARIANTS = {
     'Low': 'priority-low',

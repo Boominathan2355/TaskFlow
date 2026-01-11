@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, GripVertical, AlertCircle, Trash2, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Button from './ui/Button';
-import Input from './ui/Input';
-import { projectAPI } from '../services';
+import Button from '../atoms/Button';
+import Input from '../atoms/Input';
+import { projectAPI } from '../../services';
 
 const ProjectSettingsModal = ({ isOpen, onClose, project, onUpdate, isAdmin }) => {
     const [stages, setStages] = useState([]);

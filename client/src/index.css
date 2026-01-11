@@ -30,6 +30,48 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222.2 47.4% 11.2%;
+
+    --info: 221.2 83.2% 53.3%;
+    --info-foreground: 210 40% 98%;
+
+    --neutral: 215 16.3% 46.9%;
+    --neutral-foreground: 210 40% 98%;
+
+    /* Priority Colors */
+    --priority-low: 221.2 83.2% 53.3%;
+    --priority-low-foreground: 210 40% 98%;
+
+    --priority-medium: 38 92% 50%;
+    --priority-medium-foreground: 222.2 47.4% 11.2%;
+
+    --priority-high: 25 95% 53%;
+    --priority-high-foreground: 210 40% 98%;
+
+    --priority-urgent: 0 84.2% 60.2%;
+    --priority-urgent-foreground: 210 40% 98%;
+
+    /* Interactive States */
+    --selected: 221.2 83.2% 53.3%;
+    --selected-foreground: 210 40% 98%;
+
+    /* Online Status */
+    --online: 142.1 76.2% 36.3%;
+    --offline: 215 16.3% 46.9%;
+    --away: 38 92% 50%;
+
+    /* Data Visualization Palette */
+    --chart-1: 221.2 83.2% 53.3%;
+    --chart-2: 142.1 76.2% 36.3%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --chart-6: 173 58% 39%;
+
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
@@ -40,31 +82,106 @@
   .dark {
     --background: 225 43% 10.6%;
     --foreground: 210 40% 98%;
- 
+
     --card: 225 43% 13%;
     --card-foreground: 210 40% 98%;
- 
+
     --popover: 225 43% 11%;
     --popover-foreground: 210 40% 98%;
- 
+
     --primary: 210 40% 98%;
     --primary-foreground: 225 43% 11%;
- 
+
     --secondary: 225 43% 16%;
     --secondary-foreground: 210 40% 98%;
- 
+
     --muted: 225 43% 16%;
     --muted-foreground: 215 20% 65%;
- 
+
     --accent: 225 43% 20%;
     --accent-foreground: 210 40% 98%;
- 
-    --destructive: 0 62.8% 30.6%;
+
+    --destructive: 0 62.8% 50%;
     --destructive-foreground: 210 40% 98%;
- 
+
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 15%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 200 100% 10%;
+
+    --neutral: 215 20% 50%;
+    --neutral-foreground: 210 40% 98%;
+
+    /* Priority Colors - Dark Theme */
+    --priority-low: 199 89% 48%;
+    --priority-low-foreground: 200 100% 10%;
+
+    --priority-medium: 38 92% 50%;
+    --priority-medium-foreground: 38 92% 15%;
+
+    --priority-high: 25 95% 53%;
+    --priority-high-foreground: 25 95% 10%;
+
+    --priority-urgent: 0 62.8% 50%;
+    --priority-urgent-foreground: 210 40% 98%;
+
+    /* Interactive States - Dark Theme */
+    --selected: 199 89% 48%;
+    --selected-foreground: 210 40% 98%;
+
+    /* Online Status - Dark Theme */
+    --online: 142.1 70.6% 45.3%;
+    --offline: 215 20% 50%;
+    --away: 38 92% 50%;
+
+    /* Data Visualization Palette - Dark Theme */
+    --chart-1: 199 89% 48%;
+    --chart-2: 142.1 70.6% 45.3%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --chart-6: 173 58% 39%;
+
     --border: 225 43% 18%;
     --input: 225 43% 18%;
     --ring: 225 43% 25%;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-background/60 backdrop-blur-2xl border-border/30;
+  }
+
+  .glass-card {
+    @apply bg-card/60 backdrop-blur-xl border border-border/20 shadow-2xl;
+  }
+
+  .mesh-gradient {
+    background-image:
+      radial-gradient(at 0% 0%, hsla(var(--primary), 0.03) 0, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(var(--primary), 0.03) 0, transparent 50%);
+  }
+
+  .chat-bubble-me {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/10 rounded-full hover:bg-muted-foreground/30 transition-colors;
   }
 }
 
@@ -74,6 +191,6 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
   }
 }

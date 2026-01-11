@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { projectAPI, taskAPI } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Badge from '../components/ui/Badge';
+import Button from '../components/atoms/Button';
+import Input from '../components/atoms/Input';
+import Badge from '../components/atoms/Badge';
 import { Plus, Search, CheckCircle2, Clock, AlertCircle, User, Layout, ListTodo, Calendar, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import WelcomeBanner from '../components/WelcomeBanner';
-import ProjectCard from '../components/ProjectCard';
-import CreateProjectModal from '../components/CreateProjectModal';
+import WelcomeBanner from '../components/molecules/WelcomeBanner';
+import ProjectCard from '../components/molecules/ProjectCard';
+import CreateProjectModal from '../components/organisms/CreateProjectModal';
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -94,7 +94,7 @@ const Dashboard = () => {
     }
 
     return (
-        <div className="space-y-10 max-w-[1400px] mx-auto pb-12">
+        <div className="space-y-10 w-full pb-12">
             <WelcomeBanner />
 
             {/* My Tasks Section */}
@@ -244,11 +244,117 @@ const Dashboard = () => {
                 )}
             </div>
 
+
             <CreateProjectModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onCreate={handleCreateProject}
             />
+        </div>
+    );
+};
+
+// Chat Search Section Component
+const ChatSearchSection = ({ chatSearchQuery, setChatSearchQuery, navigate }) => {
+    const { chats, setSelectedChat } = useChat();
+    const { user: currentUser } = useAuth();
+
+    const getSender = (users) => {
+        return users[0]._id === currentUser._id ? users[1] : users[0];
+    };
+
+    const filteredChats = chats.filter(chat => {
+        if (!chatSearchQuery.trim()) return true;
+
+        const searchLower = chatSearchQuery.toLowerCase();
+
+        if (chat.isGroupChat) {
+            return chat.chatName?.toLowerCase().includes(searchLower);
+        } else {
+            const sender = getSender(chat.users);
+            return sender?.name?.toLowerCase().includes(searchLower);
+        }
+    });
+
+    const handleChatClick = (chat) => {
+        setSelectedChat(chat);
+        navigate('/chat');
+    };
+
+    return (
+        <div className="space-y-6 pt-6 border-t border-border/40">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                        <MessageSquare className="w-6 h-6 text-primary" />
+                        Your Chats
+                    </h2>
+                    <p className="text-muted-foreground mt-1">
+                        Search for conversations and group chats
+                    </p>
+                </div>
+            </div>
+
+            <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                    placeholder="Search chats and groups..."
+                    value={chatSearchQuery}
+                    onChange={(e) => setChatSearchQuery(e.target.value)}
+                    className="pl-10 bg-muted/50 border-border/50 rounded-xl shadow-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:bg-background focus-visible:border-primary placeholder:text-muted-foreground/50"
+                />
+            </div>
+
+            {filteredChats.length === 0 ? (
+                <div className="text-center py-20 bg-card rounded-2xl border border-dashed border-border">
+                    <div className="mx-auto h-12 w-12 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
+                        <MessageSquare className="w-6 h-6" />
+                    </div>
+                    <h3 className="font-bold text-lg mb-1">No chats found</h3>
+                    <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                        {chatSearchQuery ? `We couldn't find any chats matching "${chatSearchQuery}"` : 'Start a conversation to see your chats here.'}
+                    </p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredChats.map((chat) => {
+                        const sender = !chat.isGroupChat ? getSender(chat.users) : null;
+
+                        return (
+                            <button
+                                key={chat._id}
+                                onClick={() => handleChatClick(chat)}
+                                className="p-4 bg-card border border-border/60 rounded-xl hover:border-primary/40 hover:shadow-md transition-all text-left group"
+                            >
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                        {chat.isGroupChat ? (
+                                            <Users size={24} />
+                                        ) : (
+                                            sender?.avatar ? <img src={sender.avatar} className="w-full h-full rounded-xl object-cover" alt={sender.name} /> : sender?.name?.charAt(0)
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold truncate group-hover:text-primary transition-colors">
+                                            {chat.isGroupChat ? chat.chatName : sender?.name}
+                                        </h3>
+                                        {chat.isGroupChat && (
+                                            <p className="text-xs text-muted-foreground">
+                                                {chat.users.length} members
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                {chat.latestMessage && (
+                                    <p className="text-sm text-muted-foreground truncate">
+                                        <span className="font-semibold">{chat.latestMessage.sender.name.split(' ')[0]}:</span> {chat.latestMessage.content}
+                                    </p>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };

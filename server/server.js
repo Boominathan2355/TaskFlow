@@ -14,6 +14,8 @@ const notificationRoutes = require('./routes/notifications');
 const activityRoutes = require('./routes/activity');
 
 const uploadRoutes = require('./routes/upload');
+const chatRoutes = require('./routes/chat');
+const messageRoutes = require('./routes/message');
 
 // Initialize Express app
 const app = express();
@@ -26,8 +28,48 @@ const io = new Server(server, {
 });
 
 // Socket.io connection handling
+const onlineUsers = new Map(); // userId -> Set(socketIds)
+
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
+
+    socket.on('setup', (userData) => {
+        const userId = userData._id || userData.id;
+        socket.join(userId);
+
+        if (!onlineUsers.has(userId)) {
+            onlineUsers.set(userId, new Set());
+            console.log('User Online:', userId);
+            io.emit('user_status', { userId, status: 'online' });
+        }
+        onlineUsers.get(userId).add(socket.id);
+
+        socket.emit('connected');
+        socket.emit('get_online_users', Array.from(onlineUsers.keys()));
+    });
+
+    socket.on('join_chat', (room) => {
+        socket.join(room);
+        console.log('User Joined Room: ' + room);
+    });
+
+    socket.on('typing', (room) => socket.in(room).emit('typing'));
+    socket.on('stop_typing', (room) => socket.in(room).emit('stop_typing'));
+
+    socket.on('new_message', (newMessageReceived) => {
+        var chat = newMessageReceived.chat;
+
+        if (!chat.users) return console.log('chat.users not defined');
+
+        console.log(`New message in chat ${chat._id} from ${newMessageReceived.sender.name}`);
+
+        chat.users.forEach((user) => {
+            if (user._id == newMessageReceived.sender._id) return;
+
+            console.log(`Relaying message to user: ${user._id}`);
+            socket.in(user._id).emit('message_received', newMessageReceived);
+        });
+    });
 
     socket.on('join_project', (projectId) => {
         socket.join(projectId);
@@ -59,6 +101,17 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
+        for (let [userId, sockets] of onlineUsers.entries()) {
+            if (sockets.has(socket.id)) {
+                sockets.delete(socket.id);
+                if (sockets.size === 0) {
+                    onlineUsers.delete(userId);
+                    console.log('User Offline:', userId);
+                    io.emit('user_status', { userId, status: 'offline' });
+                }
+                break;
+            }
+        }
     });
 });
 
@@ -90,6 +143,8 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/message', messageRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

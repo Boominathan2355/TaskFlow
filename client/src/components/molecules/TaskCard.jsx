@@ -3,8 +3,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { format } from 'date-fns';
 import { Calendar, MessageSquare, Paperclip, AlertCircle, MoreHorizontal } from 'lucide-react';
-import Badge from '../ui/Badge';
-import Avatar from '../ui/Avatar';
+import Badge from '../atoms/Badge';
+import Avatar from '../atoms/Avatar';
 
 const TaskCard = ({ task, onClick }) => {
     const {
@@ -24,13 +24,13 @@ const TaskCard = ({ task, onClick }) => {
 
     const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.stage !== 'Done';
 
-    // Priority Border Colors - Matching the design
+    // Priority Border Colors - Using semantic tokens
     const priorityBorderColor = {
-        'Low': 'border-l-gray-400',
-        'Medium': 'border-l-blue-500',
-        'High': 'border-l-orange-500',
-        'Urgent': 'border-l-red-500'
-    }[task.priority] || 'border-l-gray-300';
+        'Low': 'border-l-priority-low',
+        'Medium': 'border-l-priority-medium',
+        'High': 'border-l-priority-high',
+        'Urgent': 'border-l-priority-urgent'
+    }[task.priority] || 'border-l-muted';
 
     // Priority Badge Variants
     const priorityVariant = {
@@ -85,7 +85,7 @@ const TaskCard = ({ task, onClick }) => {
                         <div className={`
                             flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-md border border-transparent
                             ${isOverdue
-                                ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                                ? 'bg-destructive/10 text-destructive'
                                 : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                             } transition-colors
                         `}>
@@ -98,12 +98,12 @@ const TaskCard = ({ task, onClick }) => {
                 <div className="flex items-center justify-between pt-3 mt-1">
                     <div className="flex items-center gap-3 text-xs text-muted-foreground/70">
                         {/* Always show icons slightly dimmed unless they have active counts */}
-                        <div className={`flex items-center gap-1 ${task.comments?.length ? 'text-blue-500 dark:text-blue-400' : ''}`}>
+                        <div className={`flex items-center gap-1 ${task.comments?.length ? 'text-info' : ''}`}>
                             <MessageSquare className="w-3.5 h-3.5" />
                             {task.comments?.length > 0 && <span>{task.comments.length}</span>}
                         </div>
 
-                        <div className={`flex items-center gap-1 ${task.attachments?.length ? 'text-indigo-500 dark:text-indigo-400' : ''}`}>
+                        <div className={`flex items-center gap-1 ${task.attachments?.length ? 'text-primary' : ''}`}>
                             <Paperclip className="w-3.5 h-3.5" />
                             {task.attachments?.length > 0 && <span>{task.attachments.length}</span>}
                         </div>

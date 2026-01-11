@@ -24,6 +24,22 @@ export default {
                     DEFAULT: "hsl(var(--destructive))",
                     foreground: "hsl(var(--destructive-foreground))",
                 },
+                success: {
+                    DEFAULT: "hsl(var(--success))",
+                    foreground: "hsl(var(--success-foreground))",
+                },
+                warning: {
+                    DEFAULT: "hsl(var(--warning))",
+                    foreground: "hsl(var(--warning-foreground))",
+                },
+                info: {
+                    DEFAULT: "hsl(var(--info))",
+                    foreground: "hsl(var(--info-foreground))",
+                },
+                neutral: {
+                    DEFAULT: "hsl(var(--neutral))",
+                    foreground: "hsl(var(--neutral-foreground))",
+                },
                 muted: {
                     DEFAULT: "hsl(var(--muted))",
                     foreground: "hsl(var(--muted-foreground))",
@@ -39,6 +55,37 @@ export default {
                 card: {
                     DEFAULT: "hsl(var(--card))",
                     foreground: "hsl(var(--card-foreground))",
+                },
+                'priority-low': {
+                    DEFAULT: "hsl(var(--priority-low))",
+                    foreground: "hsl(var(--priority-low-foreground))",
+                },
+                'priority-medium': {
+                    DEFAULT: "hsl(var(--priority-medium))",
+                    foreground: "hsl(var(--priority-medium-foreground))",
+                },
+                'priority-high': {
+                    DEFAULT: "hsl(var(--priority-high))",
+                    foreground: "hsl(var(--priority-high-foreground))",
+                },
+                'priority-urgent': {
+                    DEFAULT: "hsl(var(--priority-urgent))",
+                    foreground: "hsl(var(--priority-urgent-foreground))",
+                },
+                selected: {
+                    DEFAULT: "hsl(var(--selected))",
+                    foreground: "hsl(var(--selected-foreground))",
+                },
+                online: "hsl(var(--online))",
+                offline: "hsl(var(--offline))",
+                away: "hsl(var(--away))",
+                chart: {
+                    1: "hsl(var(--chart-1))",
+                    2: "hsl(var(--chart-2))",
+                    3: "hsl(var(--chart-3))",
+                    4: "hsl(var(--chart-4))",
+                    5: "hsl(var(--chart-5))",
+                    6: "hsl(var(--chart-6))",
                 },
             },
             borderRadius: {

@@ -1,6 +1,6 @@
 import React from 'react';
-import Header from './Header';
-import Footer from './Footer';
+import Header from '../organisms/Header';
+import Footer from '../organisms/Footer';
 import { useAuth } from '../../contexts/AuthContext';
 import { Outlet, Navigate } from 'react-router-dom';
 
@@ -22,10 +22,10 @@ const Layout = () => {
     return (
         <div className="min-h-screen bg-background text-foreground flex flex-col">
             <Header />
-            <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl w-full">
+            <main className={`flex-1 w-full flex flex-col ${window.location.pathname.includes('/chat') ? 'px-0 py-0' : 'px-6 py-8'}`}>
                 <Outlet />
             </main>
-            <Footer />
+            {!window.location.pathname.includes('/chat') && <Footer />}
         </div>
     );
 };

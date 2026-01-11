@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { activityAPI } from '../services';
-import Avatar from './ui/Avatar';
+import { activityAPI } from '../../services';
+import Avatar from '../atoms/Avatar';
 import { format } from 'date-fns';
-import { useSocket } from '../contexts/SocketContext';
+import { useSocket } from '../../contexts/SocketContext';
 import {
     MessageSquare,
     ArrowRightLeft,
@@ -57,45 +57,44 @@ const ActivityLog = ({ projectId }) => {
             case 'stage_changed':
                 return {
                     icon: ArrowRightLeft,
-                    color: 'text-blue-600',
-                    bg: 'bg-blue-50 dark:bg-blue-900/20',
-                    border: 'border-blue-100 dark:border-blue-800'
+                    color: 'text-info',
+                    bg: 'bg-info/10',
+                    border: 'border-info/20'
                 };
             case 'comment_added':
                 return {
                     icon: MessageSquare,
-                    color: 'text-orange-600',
-                    bg: 'bg-orange-50 dark:bg-orange-900/20',
-                    border: 'border-orange-100 dark:border-orange-800'
+                    color: 'text-warning',
+                    bg: 'bg-warning/10',
+                    border: 'border-warning/20'
                 };
             case 'task_created':
                 return {
                     icon: FileText,
-                    color: 'text-green-600',
-                    bg: 'bg-green-50 dark:bg-green-900/20',
-                    border: 'border-green-100 dark:border-green-800'
+                    color: 'text-success',
+                    bg: 'bg-success/10',
+                    border: 'border-success/20'
                 };
             case 'task_assigned':
                 return {
                     icon: UserPlus,
-                    color: 'text-cyan-600',
-                    bg: 'bg-cyan-50 dark:bg-cyan-900/20',
-                    border: 'border-cyan-100 dark:border-cyan-800'
+                    color: 'text-info',
+                    bg: 'bg-info/10',
+                    border: 'border-info/20'
                 };
             case 'task_deleted':
                 return {
                     icon: Trash2,
-                    color: 'text-red-600',
-                    bg: 'bg-red-50 dark:bg-red-900/20',
-                    border: 'border-red-100 dark:border-red-800'
+                    color: 'text-destructive',
+                    bg: 'bg-destructive/10',
+                    border: 'border-destructive/20'
                 };
             case 'project_created':
-            case 'project_updated':
                 return {
                     icon: Settings,
-                    color: 'text-purple-600',
-                    bg: 'bg-purple-50 dark:bg-purple-900/20',
-                    border: 'border-purple-100 dark:border-purple-800'
+                    color: 'text-primary',
+                    bg: 'bg-primary/10',
+                    border: 'border-primary/20'
                 };
             default:
                 return {
