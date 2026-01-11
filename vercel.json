@@ -2,6 +2,9 @@
     "buildCommand": "cd client && npm install && npm run build",
     "outputDirectory": "client/dist",
     "installCommand": "npm install --prefix client && npm install --prefix server",
+    "env": {
+        "VITE_API_URL": ""
+    },
     "rewrites": [
         {
             "source": "/api/(.*)",
