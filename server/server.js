@@ -150,12 +150,14 @@ io.on('connection', (socket) => {
     });
 
     // Notify all users in a room that a call is starting (The "Ring")
-    socket.on("ring_room", ({ roomID, callerName, isVideo }) => {
+    // Notify all users in a room that a call is starting (The "Ring")
+    socket.on("ring_room", ({ roomID, callerName, isVideo, callerId }) => {
         // Broadcast to everyone in the room except the caller
         socket.to(roomID).emit("incoming_call_notification", {
             roomID,
             callerName,
             isVideo,
+            callerId, // Pass callerId so clients can ignore self-calls
             from: socket.id // or userId
         });
     });

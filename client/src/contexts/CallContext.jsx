@@ -53,38 +53,54 @@ export const CallProvider = ({ children }) => {
             setMe(user._id);
             setName(user.name);
 
-            // Helper to show system notification
-            const showCallNotification = (props) => {
+            // Helper to show system notification via Service Worker
+            const showCallNotification = async (props) => {
                 const { name, isVideo, from } = props;
                 if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
-                    const notification = new Notification(`Incoming ${isVideo ? 'Video' : 'Audio'} Call`, {
-                        body: `${name} is calling you...`,
-                        icon: '/logo192.png', // Assuming a logo exists, or use default
-                        tag: 'incoming_call', // Overwrite existing if any
-                        requireInteraction: true,
-                        // Actions are supported in some browsers (Chrome)
-                        actions: [
-                            { action: 'answer', title: 'Answer' },
-                            { action: 'decline', title: 'Decline' }
-                        ]
-                    });
 
-                    notification.onclick = (e) => {
-                        window.focus();
-                        notification.close();
-                        if (e.action === 'answer') {
-                            answerCall();
-                            // Note: actual answer logic might need updated state (incomingCall), 
-                            // but since we are focusing the window, the user will see the Modal.
-                            // Automating the answer from notification might be tricky if state isn't ready,
-                            // but invoking the function directly is a good attempt.
-                            // Ideally, we just focus the window and let them click the large green button.
-                        } else if (e.action === 'decline') {
-                            leaveCall(false);
-                        }
-                    };
+                    try {
+                        const registration = await navigator.serviceWorker.ready;
+                        registration.showNotification(`Incoming ${isVideo ? 'Video' : 'Audio'} Call`, {
+                            body: `${name} is calling you...`,
+                            icon: '/logo192.png',
+                            tag: 'incoming_call',
+                            requireInteraction: true,
+                            data: { from, isVideo }, // Pass data if needed
+                            actions: [
+                                { action: 'answer', title: 'Answer' },
+                                { action: 'decline', title: 'Decline' }
+                            ]
+                        });
+                    } catch (e) {
+                        console.error("Notification Error:", e);
+                        // Fallback to simple notification
+                        new Notification(`Incoming ${isVideo ? 'Video' : 'Audio'} Call from ${name}`);
+                    }
                 }
             };
+
+            // Listen for Service Worker messages (Action Clicks)
+            const handleSWMessage = (event) => {
+                if (event.data && event.data.type === 'NOTIFICATION_ACTION') {
+                    console.log("Notification Action:", event.data.action);
+                    if (event.data.action === 'answer') {
+                        // We can't guarantee 'answerCall' works if state is stale, 
+                        // but since we focus window, the Modal should be visible.
+                        // Ideally we trigger answerCall here if valid.
+                        // We can check if 'incomingCall' state is valid, or just blindly try calling answerCall
+                        // But answerCall relies on 'incomingCall' state.
+                        // If the SW focuses the window, React state *should* be fresh enough?
+                        // Let's call answerCall() directly.
+                        answerCall();
+                    } else if (event.data.action === 'decline') {
+                        leaveCall(false);
+                    }
+                }
+            };
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.addEventListener('message', handleSWMessage);
+            }
 
             // 1-on-1 legacy support (or improved direct call notification)
             const handleCallUser = ({ from, name: callerName, signal, isVideo }) => {
@@ -97,6 +113,7 @@ export const CallProvider = ({ children }) => {
 
             // Mesh: Receive returned signal from a peer we called
             const handleReturningSignal = payload => {
+                soundManager.stopRing(); // Stop ringback/notification sound when answered
                 const item = peersRef.current.find(p => p.peerID === payload.id);
                 if (item) {
                     item.peer.signal(payload.signal);
@@ -117,7 +134,10 @@ export const CallProvider = ({ children }) => {
             socket.on('user_joined_signal', handleUserJoinedSignal);
 
             // Notification: Someone rang the room
-            const handleIncomingCall = ({ roomID, callerName, isVideo, from }) => {
+            const handleIncomingCall = ({ roomID, callerName, isVideo, from, callerId }) => {
+                // Prevent self-ringing (if logged in on multiple devices)
+                if (callerId && user && callerId === user._id) return;
+
                 setIncomingCall({
                     isReceivingCall: true,
                     from,
@@ -257,7 +277,7 @@ export const CallProvider = ({ children }) => {
             socket.emit("join_room", { roomID: chatId, userId: user._id, name: user.name, isVideo: video && !!currentStream });
 
             // 3. Ring the room (Notify others who might NOT be in the room)
-            socket.emit("ring_room", { roomID: chatId, callerName: user.name, isVideo: video && !!currentStream });
+            socket.emit("ring_room", { roomID: chatId, callerName: user.name, isVideo: video && !!currentStream, callerId: user._id });
 
         }).catch(err => {
             console.error("Critical error joining call", err);
