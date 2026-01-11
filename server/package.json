@@ -26,7 +26,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^7.0.0",
     "mongoose": "^8.0.3",
-    "multer": "^2.0.0-rc.1",
+    "multer": "^2.0.2",
     "nodemailer": "^7.0.12",
     "socket.io": "^4.8.3"
   },

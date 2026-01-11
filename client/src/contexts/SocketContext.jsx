@@ -37,6 +37,12 @@ export const SocketProvider = ({ children }) => {
                 activeSocket.emit('setup', user);
             });
 
+            // Re-emit setup on reconnect
+            activeSocket.on('reconnect', () => {
+                console.log('Socket Reconnected');
+                activeSocket.emit('setup', user);
+            });
+
             activeSocket.on('connect_error', (err) => {
                 if (!isVercel) {
                     console.error('Socket Connection Error:', err.message);

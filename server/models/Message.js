@@ -9,6 +9,12 @@ const messageSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    attachment: {
+        fileName: String,
+        fileUrl: String,
+        fileType: String,
+        fileSize: Number
+    },
     chat: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Chat'
@@ -16,7 +22,16 @@ const messageSchema = new mongoose.Schema({
     readBy: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
-    }]
+    }],
+    type: {
+        type: String,
+        enum: ['text', 'file', 'call'],
+        default: 'text'
+    },
+    callDuration: {
+        type: Number, // in seconds
+        default: 0
+    }
 }, {
     timestamps: true
 });

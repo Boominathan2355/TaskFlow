@@ -4,6 +4,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { ChatProvider } from './contexts/ChatContext';
+import { CallProvider } from './contexts/CallContext'; // Import CallProvider
+import CallModal from './components/molecules/CallModal'; // Import CallModal
 import Layout from './components/templates/Layout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -23,30 +25,33 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <SocketProvider>
-            <ChatProvider>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password/:token" element={<ResetPassword />} />
+            <CallProvider>
+              <ChatProvider>
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-                {/* Protected Routes */}
-                <Route element={<Layout />}>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/projects" element={<Navigate to="/" replace />} />
-                  <Route path="/projects/:id" element={<ProjectView />} />
-                  <Route path="/projects/:id/create-task" element={<CreateTask />} />
-                  <Route path="/projects/:id/tasks/:taskId" element={<TaskDetail />} />
-                  <Route path="/users" element={<UserManagement />} />
-                  <Route path="/storage" element={<StorageManagement />} />
-                  <Route path="/chat" element={<ChatPage />} />
+                  {/* Protected Routes */}
+                  <Route element={<Layout />}>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/projects" element={<Navigate to="/" replace />} />
+                    <Route path="/projects/:id" element={<ProjectView />} />
+                    <Route path="/projects/:id/create-task" element={<CreateTask />} />
+                    <Route path="/projects/:id/tasks/:taskId" element={<TaskDetail />} />
+                    <Route path="/users" element={<UserManagement />} />
+                    <Route path="/storage" element={<StorageManagement />} />
+                    <Route path="/chat" element={<ChatPage />} />
 
-                  {/* Fallback */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Route>
-              </Routes>
-            </ChatProvider>
+                    {/* Fallback */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Route>
+                </Routes>
+                <CallModal />
+              </ChatProvider>
+            </CallProvider>
           </SocketProvider>
         </AuthProvider>
       </ThemeProvider>

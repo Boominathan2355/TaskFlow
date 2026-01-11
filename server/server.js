@@ -48,6 +48,10 @@ io.on('connection', (socket) => {
         socket.emit('get_online_users', Array.from(onlineUsers.keys()));
     });
 
+    socket.on('request_online_users', () => {
+        socket.emit('get_online_users', Array.from(onlineUsers.keys()));
+    });
+
     socket.on('join_chat', (room) => {
         socket.join(room);
         console.log('User Joined Room: ' + room);
@@ -98,6 +102,82 @@ io.on('connection', (socket) => {
             console.log(`Task action ${data.action} relayed for project ${data.projectId}`);
         }
     });
+
+    // --- WebRTC Signaling ---
+    socket.on("call_user", ({ userToCall, signalData, from, name, isVideo }) => {
+        io.to(userToCall).emit("call_user", { signal: signalData, from, name, isVideo });
+    });
+
+    socket.on("answer_call", (data) => {
+        io.to(data.to).emit("call_accepted", data.signal);
+    });
+
+    // Mesh Network Events
+    socket.on("join_room", ({ roomID, userId, name, isVideo }) => {
+        // Broadcast to others in the room that a new user has joined
+        // The client will then initiate peer connections to all existing members
+        const clientsInRoom = io.sockets.adapter.rooms.get(roomID);
+        const users = clientsInRoom ? [...clientsInRoom] : [];
+        if (!users.includes(socket.id)) {
+            socket.join(roomID);
+        }
+
+        socket.to(roomID).emit("user_joined", {
+            signal: null, // Initial join doesn't carry signal in this mesh pattern, pure notification to trigger calls
+            callerID: socket.id,
+            userId,
+            name,
+            isVideo
+        });
+
+        // Return list of other users to the joiner so they can call them?
+        // Or simpler: Joiner joins socket room. Existing users see 'user_joined', THEY call the joiner.
+        // Let's use the pattern: Key is, we need to exchange signals.
+        // Valid Mesh Pattern:
+        // 1. User joins room.
+        // 2. User emits 'join_room'.
+        // 3. Server sends back list of `otherUsers` in room.
+        // 4. User creates Peer for each `otherUser` (initiator: true).
+        // 5. User emits `sending_signal` to each `otherUser`.
+        // 6. `otherUser` receives signal, creates Peer (initiator: false), signals back.
+
+        const otherUsers = users.filter(id => id !== socket.id);
+        socket.emit("all_users", otherUsers);
+    });
+
+    socket.on("sending_signal", payload => {
+        io.to(payload.userToSignal).emit('user_joined_signal', { signal: payload.signal, callerID: payload.callerID, name: payload.name, isVideo: payload.isVideo });
+    });
+
+    // Notify all users in a room that a call is starting (The "Ring")
+    socket.on("ring_room", ({ roomID, callerName, isVideo }) => {
+        // Broadcast to everyone in the room except the caller
+        socket.to(roomID).emit("incoming_call_notification", {
+            roomID,
+            callerName,
+            isVideo,
+            from: socket.id // or userId
+        });
+    });
+
+    socket.on("returning_signal", payload => {
+        io.to(payload.callerID).emit('receiving_returned_signal', { signal: payload.signal, id: socket.id });
+    });
+    // ------------------------
+
+    // Relay pure signal data (for ICE candidates if trickling, or re-negotiation)
+
+    // Relay pure signal data (for ICE candidates if trickling, or re-negotiation)
+    socket.on("send_signal", (data) => {
+        io.to(data.userToCall).emit("received_signal", { signal: data.signal, from: data.from });
+    });
+
+    socket.on("end_call", (data) => {
+        if (data && data.to) {
+            io.to(data.to).emit("call_ended");
+        }
+    });
+    // ------------------------
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
