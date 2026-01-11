@@ -44,27 +44,68 @@ export const CallProvider = ({ children }) => {
     const { user } = useAuth();
 
     useEffect(() => {
+        // Request Notification Permission on mount
+        if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+            Notification.requestPermission();
+        }
+
         if (socket && user) {
             setMe(user._id);
             setName(user.name);
 
+            // Helper to show system notification
+            const showCallNotification = (props) => {
+                const { name, isVideo, from } = props;
+                if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
+                    const notification = new Notification(`Incoming ${isVideo ? 'Video' : 'Audio'} Call`, {
+                        body: `${name} is calling you...`,
+                        icon: '/logo192.png', // Assuming a logo exists, or use default
+                        tag: 'incoming_call', // Overwrite existing if any
+                        requireInteraction: true,
+                        // Actions are supported in some browsers (Chrome)
+                        actions: [
+                            { action: 'answer', title: 'Answer' },
+                            { action: 'decline', title: 'Decline' }
+                        ]
+                    });
+
+                    notification.onclick = (e) => {
+                        window.focus();
+                        notification.close();
+                        if (e.action === 'answer') {
+                            answerCall();
+                            // Note: actual answer logic might need updated state (incomingCall), 
+                            // but since we are focusing the window, the user will see the Modal.
+                            // Automating the answer from notification might be tricky if state isn't ready,
+                            // but invoking the function directly is a good attempt.
+                            // Ideally, we just focus the window and let them click the large green button.
+                        } else if (e.action === 'decline') {
+                            leaveCall(false);
+                        }
+                    };
+                }
+            };
+
             // 1-on-1 legacy support (or improved direct call notification)
-            socket.on("call_user", ({ from, name: callerName, signal, isVideo }) => {
+            const handleCallUser = ({ from, name: callerName, signal, isVideo }) => {
                 setIncomingCall({ isReceivingCall: true, from, name: callerName, signal, isVideo });
                 setIsReceivingCall(true);
                 soundManager.playRing();
-            });
+                showCallNotification({ name: callerName, isVideo, from });
+            };
+            socket.on("call_user", handleCallUser);
 
             // Mesh: Receive returned signal from a peer we called
-            socket.on("receiving_returned_signal", payload => {
+            const handleReturningSignal = payload => {
                 const item = peersRef.current.find(p => p.peerID === payload.id);
                 if (item) {
                     item.peer.signal(payload.signal);
                 }
-            });
+            };
+            socket.on("receiving_returned_signal", handleReturningSignal);
 
             // Mesh: A new user joined and is signaling us
-            socket.on('user_joined_signal', payload => {
+            const handleUserJoinedSignal = payload => {
                 const peer = addPeer(payload.signal, payload.callerID, stream); // We are answering
                 peersRef.current.push({
                     peerID: payload.callerID,
@@ -72,10 +113,11 @@ export const CallProvider = ({ children }) => {
                     userName: payload.name,
                 });
                 setPeers(users => [...users, { peerID: payload.callerID, peer, userName: payload.name }]);
-            });
+            };
+            socket.on('user_joined_signal', handleUserJoinedSignal);
 
             // Notification: Someone rang the room
-            socket.on("incoming_call_notification", ({ roomID, callerName, isVideo, from }) => {
+            const handleIncomingCall = ({ roomID, callerName, isVideo, from }) => {
                 setIncomingCall({
                     isReceivingCall: true,
                     from,
@@ -85,9 +127,11 @@ export const CallProvider = ({ children }) => {
                 });
                 setIsReceivingCall(true);
                 soundManager.playRing();
-            });
+                showCallNotification({ name: callerName, isVideo, from });
+            };
+            socket.on("incoming_call_notification", handleIncomingCall);
 
-            socket.on("all_users", users => {
+            const handleAllUsers = users => {
                 // We joined, here is the list of existing users to call
                 const peers = [];
                 users.forEach(userID => {
@@ -102,19 +146,35 @@ export const CallProvider = ({ children }) => {
                     });
                 });
                 setPeers(peers);
-            });
+            };
+            socket.on("all_users", handleAllUsers);
 
             // Handle Remote End Call
-            socket.on("end_call", () => {
+            const handleEndCall = () => {
+                console.log("Received end_call signal from server. terminating call.");
                 leaveCall(false); // End local call without emitting
-            });
+                // Close any open notifications?
+            };
+            socket.on("end_call", handleEndCall);
 
             // Handle Call Answered Elsewhere (Same User, Different Device)
-            socket.on("stop_ringing_self", () => {
+            const handleStopRinging = () => {
                 soundManager.stopRing();
                 setIsReceivingCall(false);
                 setIncomingCall(null);
-            });
+            };
+            socket.on("stop_ringing_self", handleStopRinging);
+
+            // Cleanup function to remove listeners
+            return () => {
+                socket.off("call_user", handleCallUser);
+                socket.off("receiving_returned_signal", handleReturningSignal);
+                socket.off("user_joined_signal", handleUserJoinedSignal);
+                socket.off("incoming_call_notification", handleIncomingCall);
+                socket.off("all_users", handleAllUsers);
+                socket.off("end_call", handleEndCall);
+                socket.off("stop_ringing_self", handleStopRinging);
+            };
         }
     }, [socket, user, stream]); // Stream dependency crucial for addPeer/createPeer
 
@@ -238,27 +298,26 @@ export const CallProvider = ({ children }) => {
 
         // Emit End Call to others if initiator
         if (endCall && socket && chatIdRef.current) {
+            console.log("Emitting end_call for room:", chatIdRef.current);
             socket.emit("end_call", { roomID: chatIdRef.current });
         }
 
-        // Log Call Duration
+        // Prepare logging data but don't await default behavior
         if (callAccepted && callStartTime.current && chatIdRef.current) {
             const duration = Math.round((Date.now() - callStartTime.current) / 1000); // seconds
+            const token = localStorage.getItem('token');
+            const chatId = chatIdRef.current; // Capture current ref before cleanup
 
-            try {
-                const token = localStorage.getItem('token');
-                await axios.post(`${config.API_URL}/api/message`,
-                    {
-                        content: `Call ended • ${Math.floor(duration / 60)}m ${duration % 60}s`,
-                        chatId: chatIdRef.current,
-                        type: 'call',
-                        callDuration: duration
-                    },
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-            } catch (e) {
-                console.error("Failed to log call history", e);
-            }
+            // Fire and forget logging
+            axios.post(`${config.API_URL}/api/message`,
+                {
+                    content: `Call ended • ${Math.floor(duration / 60)}m ${duration % 60}s`,
+                    chatId: chatId,
+                    type: 'call',
+                    callDuration: duration
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+            ).catch(e => console.error("Failed to log call history", e));
         }
 
         setCallEnded(true);
@@ -275,23 +334,13 @@ export const CallProvider = ({ children }) => {
         setIsReceivingCall(false);
         setIncomingCall(null);
 
-        // window.location.reload(); // REMOVED: Prevent auto-refresh
-
         // Reset refs
         connectionRef.current = null;
         screenStreamRef.current = null;
         originalStreamRef.current = null;
+        // chatIdRef.current = null; // Do not nullify immediately if needed for race conditions, but logically it's done.
 
-        // Signal that we are ready for next call
-        setCallEnded(false); // Reset this too to allow new calls? Or keep it true until new action?
-        // Typically callEnded=true might show "Call Ended" UI. 
-        // Let's set it to false after a short delay or immediately if we want to return to "idle" state.
-        // For now, let's keep it consistent with "clean slate".
         setCallEnded(false);
-
-        // Optional: Re-initialize specific listeners if they were removed? 
-        // Socket listeners in useEffect depend on 'me' which doesn't change. 
-        // So we should remain connected to socket.
     };
 
     const toggleScreenShare = async () => {

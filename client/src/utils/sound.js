@@ -38,29 +38,55 @@ class SoundManager {
         if (this.ringInterval) return; // Already ringing
 
         const playTone = () => {
-            const osc = this.audioCtx.createOscillator();
-            const gain = this.audioCtx.createGain();
+            // Stop any currently playing tone to avoid overlap (start fresh)
+            this.stopActiveTone();
 
-            osc.connect(gain);
-            gain.connect(this.audioCtx.destination);
+            this.oscillator = this.audioCtx.createOscillator();
+            this.gainNode = this.audioCtx.createGain();
+
+            this.oscillator.connect(this.gainNode);
+            this.gainNode.connect(this.audioCtx.destination);
 
             // Phone ring pattern
             // High-Low tone
             const now = this.audioCtx.currentTime;
 
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(440, now);
-            osc.frequency.setValueAtTime(480, now + 0.4);
+            this.oscillator.type = 'triangle';
+            this.oscillator.frequency.setValueAtTime(440, now);
+            this.oscillator.frequency.setValueAtTime(480, now + 0.4);
 
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.linearRampToValueAtTime(0, now + 1.5);
+            this.gainNode.gain.setValueAtTime(0.2, now);
+            this.gainNode.gain.linearRampToValueAtTime(0, now + 1.5);
 
-            osc.start(now);
-            osc.stop(now + 1.5);
+            this.oscillator.start(now);
+            this.oscillator.stop(now + 1.5);
+
+            // Cleanup references when done naturally
+            this.oscillator.onended = () => {
+                // Only nullify if these are still the active ones (not replaced by new ones)
+                // This checks identity strictly effectively by closure? No, checking 'this.oscillator' vs local 'osc' is better?
+                // Actually we don't strictly need to nullify if we always create new ones in playTone.
+                // But it's good practice.
+            };
         };
 
         playTone();
         this.ringInterval = setInterval(playTone, 2000);
+    }
+
+    // Helper to cut the sound immediately
+    stopActiveTone() {
+        if (this.oscillator) {
+            try {
+                this.oscillator.stop();
+                this.oscillator.disconnect();
+            } catch (e) { }
+            this.oscillator = null;
+        }
+        if (this.gainNode) {
+            try { this.gainNode.disconnect(); } catch (e) { }
+            this.gainNode = null;
+        }
     }
 
     stopRing() {
@@ -68,6 +94,7 @@ class SoundManager {
             clearInterval(this.ringInterval);
             this.ringInterval = null;
         }
+        this.stopActiveTone();
     }
 }
 
