@@ -1,5 +1,8 @@
 {
   "name": "task-flow",
+  "scripts": {
+    "build": "echo 'Build handled by individual services in render.yaml'"
+  },
   "dependencies": {
     "dotenv": "^17.2.3",
     "jsonwebtoken": "^9.0.3"
