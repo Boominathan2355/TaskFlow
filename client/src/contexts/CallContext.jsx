@@ -241,27 +241,51 @@ export const CallProvider = ({ children }) => {
         // Helper to get media: Always try for Video+Audio to allow seamless toggling
         const getMedia = async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                if (!video) {
-                    // If audio-only mode, disable video track initially
-                    stream.getVideoTracks().forEach(track => track.enabled = false);
+                // Explicitly request audio and video
+                // Note: We might want echoCancellation: true for better calls
+                const constraints = {
+                    video: true,
+                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+                };
+
+                let currentStream;
+                try {
+                    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                } catch (err) {
+                    console.warn("Retrying with looser audio constraints", err);
+                    // Fallback for simple audio
+                    currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 }
-                return stream;
+
+                if (!video) {
+                    // If start as audio-only, disable video track initially BUT keep it in stream
+                    currentStream.getVideoTracks().forEach(track => track.enabled = false);
+                }
+
+                // Ensure audio is enabled
+                currentStream.getAudioTracks().forEach(track => track.enabled = true);
+
+                return currentStream;
             } catch (err) {
                 console.warn("Failed to get video+audio, trying audio only", err);
 
-                if (err.name === 'NotAllowedError') {
-                    console.warn("Permission denied. Joining as listener.");
-                    setPermissionDialog({
-                        isOpen: true,
-                        title: "Media Access Blocked",
-                        message: "We need access to your microphone/camera to join the call. Please check your browser settings.",
-                        onRetry: () => joinCall(chatId, video)
-                    });
+                // Fallback: Try Audio Only if Video fails
+                try {
+                    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    return audioStream;
+                } catch (audioErr) {
+                    if (err.name === 'NotAllowedError' || audioErr.name === 'NotAllowedError') {
+                        console.warn("Permission denied. Joining as listener.");
+                        setPermissionDialog({
+                            isOpen: true,
+                            title: "Microphone Access Blocked",
+                            message: "We need access to your microphone to join the call. Please check your browser settings and try again.",
+                            onRetry: () => joinCall(chatId, video)
+                        });
+                    }
+                    console.error("No media devices access", audioErr);
+                    return null;
                 }
-
-                // Return null to proceed without media
-                return null;
             }
         };
 
