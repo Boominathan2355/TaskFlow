@@ -1,10 +1,9 @@
 // Vercel serverless function entry point
 // Socket.io features are disabled in serverless mode
 
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('../server/config/database');
+const mongoose = require('mongoose');
 
 // Import routes
 const authRoutes = require('../server/routes/auth');
@@ -20,8 +19,30 @@ const messageRoutes = require('../server/routes/message');
 // Initialize Express app
 const app = express();
 
-// Connect to MongoDB
-connectDB();
+// MongoDB connection cache for serverless
+let cachedDb = null;
+
+async function connectToDatabase() {
+    if (cachedDb && mongoose.connection.readyState === 1) {
+        console.log('Using cached database connection');
+        return cachedDb;
+    }
+
+    try {
+        const opts = {
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+        };
+
+        await mongoose.connect(process.env.MONGODB_URI, opts);
+        cachedDb = mongoose.connection;
+        console.log('New database connection established');
+        return cachedDb;
+    } catch (error) {
+        console.error('MongoDB connection error:', error);
+        throw error;
+    }
+}
 
 // Middleware
 app.use(cors({
@@ -37,6 +58,20 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
     next();
+});
+
+// Database connection middleware
+app.use(async (req, res, next) => {
+    try {
+        await connectToDatabase();
+        next();
+    } catch (error) {
+        console.error('Database connection failed:', error);
+        res.status(503).json({
+            error: 'Database connection failed',
+            message: 'Unable to connect to database. Please try again later.'
+        });
+    }
 });
 
 // API Routes
@@ -57,6 +92,7 @@ app.get('/api/health', (req, res) => {
         message: 'TaskFlow API is running on Vercel',
         timestamp: new Date().toISOString(),
         environment: 'serverless',
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
         note: 'Real-time features (Socket.io) are not available in serverless mode'
     });
 });
@@ -98,3 +134,4 @@ app.use((err, req, res, next) => {
 
 // Export for Vercel
 module.exports = app;
+
