@@ -112,6 +112,7 @@ const ResetPassword = () => {
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
                                     placeholder="••••••••"
+                                    autoComplete="new-password"
                                     className="bg-background border-border focus:ring-primary rounded-xl"
                                     disabled={status === 'loading'}
                                 />
@@ -128,6 +129,7 @@ const ResetPassword = () => {
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     required
                                     placeholder="••••••••"
+                                    autoComplete="new-password"
                                     className="bg-background border-border focus:ring-primary rounded-xl"
                                     disabled={status === 'loading'}
                                 />
@@ -158,7 +160,7 @@ const ResetPassword = () => {
             </div>
 
             <footer className="fixed bottom-4 text-center text-xs text-muted-foreground w-full">
-                © 2024 TaskFlow. All rights reserved.
+                © 2026 TaskFlow. All rights reserved.
             </footer>
         </div>
     );

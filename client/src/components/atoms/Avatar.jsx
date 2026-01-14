@@ -3,6 +3,8 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 const Avatar = ({ src, alt, fallback, className, size = 'md' }) => {
+    const [imageError, setImageError] = React.useState(false);
+
     const sizeClasses = {
         sm: 'w-6 h-6 text-xs',
         md: 'w-8 h-8 text-sm',
@@ -18,17 +20,18 @@ const Avatar = ({ src, alt, fallback, className, size = 'md' }) => {
                 className
             )}
         >
-            {src ? (
+            {src && !imageError ? (
                 <img
                     src={src}
                     alt={alt}
                     className="aspect-square h-full w-full object-cover"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+                    onError={() => setImageError(true)}
                 />
-            ) : null}
-            <span className={src ? 'hidden' : 'flex'}>
-                {fallback || alt?.charAt(0) || '?'}
-            </span>
+            ) : (
+                <span className="flex">
+                    {fallback || alt?.charAt(0) || '?'}
+                </span>
+            )}
         </div>
     );
 };

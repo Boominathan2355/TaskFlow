@@ -90,7 +90,7 @@ const TaskListView = ({ tasks, onTaskClick }) => {
                                     </td>
                                     <td className="px-6 py-5">
                                         <div className="flex -space-x-1.5 justify-center">
-                                            {task.assignedTo && task.assignedTo.length > 0 ? (
+                                            {task.assignedTo && task.assignedTo.length > 0 && task.assignedTo[0] ? (
                                                 <Avatar
                                                     key={task.assignedTo[0]._id}
                                                     src={task.assignedTo[0].avatar}

@@ -3,6 +3,8 @@ import { ArrowLeft, Send, MoreVertical, Paperclip, Smile, Users, Bold, Italic, C
 import EmojiPicker from 'emoji-picker-react';
 import ReactMarkdown from 'react-markdown';
 import { MentionsInput, Mention } from 'react-mentions';
+import axios from 'axios';
+import { config } from '../../config';
 import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
@@ -19,6 +21,7 @@ const ChatWindow = () => {
     const [showMenu, setShowMenu] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
+    const [pastedAttachments, setPastedAttachments] = useState([]);
     const [markdownMode, setMarkdownMode] = useState(false);
     const messagesEndRef = useRef(null);
     const menuRef = useRef(null);
@@ -51,6 +54,43 @@ const ChatWindow = () => {
         }
     }, [socket, selectedChat]);
 
+    // Handle paste event for images and videos
+    useEffect(() => {
+        const handlePaste = (e) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+
+            for (let i = 0; i < items.length; i++) {
+                const isImage = items[i].type.indexOf('image') !== -1;
+                const isVideo = items[i].type.indexOf('video') !== -1;
+
+                if (isImage || isVideo) {
+                    const blob = items[i].getAsFile();
+                    const reader = new FileReader();
+
+                    reader.onload = (event) => {
+                        const extension = isImage ? 'png' : 'mp4';
+                        const prefix = isImage ? 'pasted-image' : 'pasted-video';
+
+                        setPastedAttachments(prev => [...prev, {
+                            file: blob,
+                            preview: event.target.result,
+                            name: `${prefix}-${Date.now()}.${extension}`,
+                            type: blob.type,
+                            isVideo: isVideo
+                        }]);
+                    };
+
+                    reader.readAsDataURL(blob);
+                    e.preventDefault();
+                }
+            }
+        };
+
+        document.addEventListener('paste', handlePaste);
+        return () => document.removeEventListener('paste', handlePaste);
+    }, []);
+
     // Close menu when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -77,11 +117,47 @@ const ChatWindow = () => {
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
+
+        // Upload pasted attachments first if any
+        if (pastedAttachments.length > 0) {
+            for (const attachment of pastedAttachments) {
+                await uploadAttachment(attachment.file);
+            }
+            setPastedAttachments([]);
+        }
+
         if (newMessage.trim()) {
             socket?.emit("stop_typing", selectedChat._id);
             const messageToSend = newMessage;
             setNewMessage("");
             await sendMessage(messageToSend, selectedChat._id);
+        }
+    };
+
+    const uploadAttachment = async (file) => {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('chatId', selectedChat._id);
+
+            const token = localStorage.getItem('token');
+            const response = await axios.post(`${config.API_URL}/api/message/upload`, formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            // Emit socket event for real-time update
+            if (socket) {
+                socket.emit('new_message', response.data);
+            }
+
+            // Refresh messages
+            await fetchMessages(selectedChat._id);
+        } catch (error) {
+            console.error('Attachment upload error:', error);
+            alert('Failed to upload attachment. Please try again.');
         }
     };
 
@@ -110,12 +186,6 @@ const ChatWindow = () => {
     const handleFileSelect = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
-        // Validate file size (10MB limit)
-        if (file.size > 10 * 1024 * 1024) {
-            alert('File size must be less than 10MB');
-            return;
-        }
 
         try {
             const formData = new FormData();
@@ -220,6 +290,9 @@ const ChatWindow = () => {
 
     const chatPartner = !selectedChat.isGroupChat ? getSender(selectedChat.users) : null;
 
+    // Detect self-chat (works for old chats without isSelfChat flag)
+    const isSelfChat = selectedChat.isSelfChat || (!selectedChat.isGroupChat && selectedChat.users?.length === 1 && selectedChat.users[0]?._id === currentUser._id);
+
     const handleCall = (video = false) => {
         // Unified call logic for both Group and Direct
         // For direct, we treat it as a room with the Chat ID
@@ -241,17 +314,25 @@ const ChatWindow = () => {
                         <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center font-bold overflow-hidden shadow-inner group-hover:scale-105 transition-transform">
                             {selectedChat.isGroupChat ? (
                                 <Users size={28} className="text-primary/70" />
+                            ) : isSelfChat ? (
+                                currentUser.avatar ? <img src={currentUser.avatar} className="w-full h-full object-cover" /> : currentUser.name?.charAt(0) || 'U'
+                            ) : chatPartner ? (
+                                chatPartner.avatar ? <img src={chatPartner.avatar} className="w-full h-full object-cover" /> : chatPartner.name?.charAt(0) || 'U'
                             ) : (
-                                chatPartner.avatar ? <img src={chatPartner.avatar} className="w-full h-full object-cover" /> : chatPartner.name.charAt(0)
+                                'U'
                             )}
                         </div>
-                        {!selectedChat.isGroupChat && onlineUsers.includes(chatPartner._id) && (
+                        {!selectedChat.isGroupChat && !isSelfChat && chatPartner && onlineUsers.includes(chatPartner._id) && (
                             <div className="absolute -bottom-1 -right-1 w-4.5 h-4.5 bg-online border-[3.5px] border-background rounded-full shadow-lg" />
                         )}
                     </div>
                     <div className="flex flex-col gap-0.5 min-w-0">
                         <h3 className="font-bold text-xl tracking-tight truncate">
-                            {selectedChat.isGroupChat ? selectedChat.chatName : chatPartner.name}
+                            {isSelfChat
+                                ? `${currentUser?.name} (You)`
+                                : selectedChat.isGroupChat
+                                    ? selectedChat.chatName
+                                    : chatPartner?.name || 'Unknown User'}
                         </h3>
                         <div className="flex items-center gap-2">
                             {isTyping ? (
@@ -265,14 +346,14 @@ const ChatWindow = () => {
                                 </div>
                             ) : selectedChat.isGroupChat ? (
                                 <p className="text-[10px] text-muted-foreground/50 font-black uppercase tracking-[0.2em]">{selectedChat.users.length} Active Members</p>
-                            ) : (
+                            ) : chatPartner ? (
                                 <div className="flex items-center gap-2">
                                     <div className={`w-2 h-2 rounded-full ring-2 ring-background ${onlineUsers.includes(chatPartner._id) ? 'bg-online' : 'bg-offline'}`} />
                                     <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${onlineUsers.includes(chatPartner._id) ? 'text-success' : 'text-muted-foreground/40'}`}>
                                         {onlineUsers.includes(chatPartner._id) ? "Online now" : "Offline"}
                                     </p>
                                 </div>
-                            )}
+                            ) : null}
                         </div>
                     </div>
                 </div>
@@ -403,6 +484,39 @@ const ChatWindow = () => {
                                             ? 'chat-bubble-me text-primary-foreground shadow-primary/20 rounded-br-none'
                                             : 'bg-card border border-border/50 text-foreground rounded-bl-none hover:border-primary/20'
                                             }`}>
+                                            {/* Render attachment if exists */}
+                                            {m.attachment && m.attachment.fileUrl && (
+                                                <div className="mb-2">
+                                                    {m.attachment.fileType?.startsWith('image/') ? (
+                                                        <img
+                                                            src={`${config.API_URL}${m.attachment.fileUrl}`}
+                                                            alt={m.attachment.fileName}
+                                                            className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                                            onClick={() => window.open(`${config.API_URL}${m.attachment.fileUrl}`, '_blank')}
+                                                        />
+                                                    ) : m.attachment.fileType?.startsWith('video/') ? (
+                                                        <video
+                                                            src={`${config.API_URL}${m.attachment.fileUrl}`}
+                                                            controls
+                                                            className="max-w-xs rounded-lg"
+                                                        />
+                                                    ) : (
+                                                        <a
+                                                            href={`${config.API_URL}${m.attachment.fileUrl}`}
+                                                            download={m.attachment.fileName}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-2 px-3 py-2 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors"
+                                                        >
+                                                            <Paperclip size={16} />
+                                                            <span className="text-xs font-medium">{m.attachment.fileName}</span>
+                                                            <span className="text-[10px] text-muted-foreground">
+                                                                ({(m.attachment.fileSize / 1024).toFixed(1)}KB)
+                                                            </span>
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            )}
                                             <ReactMarkdown>{m.content}</ReactMarkdown>
                                             <span className={`text-[9px] block mt-1 opacity-0 group-hover:opacity-60 transition-opacity absolute top-[-18px] ${isMe ? 'right-0' : 'left-0'} text-muted-foreground font-medium`}>
                                                 {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -419,6 +533,59 @@ const ChatWindow = () => {
 
             {/* Input Area */}
             <div className="p-6 relative z-20">
+                {/* Attachments Preview */}
+                {pastedAttachments.length > 0 && (
+                    <div className="mb-4 p-4 bg-card border border-border/50 rounded-2xl">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2 text-sm font-bold text-foreground">
+                                <Paperclip size={16} className="text-primary" />
+                                <span>ATTACHMENTS</span>
+                                <span className="text-xs text-muted-foreground">({pastedAttachments.length})</span>
+                            </div>
+                            <button
+                                onClick={() => setPastedAttachments([])}
+                                className="text-xs text-destructive hover:underline"
+                            >
+                                Clear All
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                            {pastedAttachments.map((attachment, index) => (
+                                <div key={index} className="relative group">
+                                    {attachment.isVideo ? (
+                                        <div className="relative">
+                                            <video
+                                                src={attachment.preview}
+                                                className="w-full h-24 object-cover rounded-lg border border-border"
+                                            />
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
+                                                <Video size={24} className="text-white" />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <img
+                                            src={attachment.preview}
+                                            alt={attachment.name}
+                                            className="w-full h-24 object-cover rounded-lg border border-border"
+                                        />
+                                    )}
+                                    <button
+                                        onClick={() => setPastedAttachments(prev => prev.filter((_, i) => i !== index))}
+                                        className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M18 6L6 18M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                    <div className="mt-1 text-[10px] text-muted-foreground truncate">
+                                        {attachment.name}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div className={`w-full mx-auto glass-panel shadow-xl border-border/10 focus-within:border-primary/40 transition-all ${markdownMode ? 'rounded-2xl' : 'rounded-[2.5rem] p-1.5'}`}>
                     {/* Markdown Toolbar */}
                     {markdownMode && (

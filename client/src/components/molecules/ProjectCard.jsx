@@ -93,26 +93,21 @@ const ProjectCard = ({ project }) => {
 
                 <div className="pl-3 flex items-center justify-between pt-4 border-t border-border mt-auto">
                     <div className="flex -space-x-2">
-                        {members.slice(0, 4).map((member, i) => (
+                        {members.map((member, i) => member?.user ? (
                             <div
-                                key={member.user?._id || i}
+                                key={member.user._id}
                                 className="w-8 h-8 rounded-full border-2 border-background bg-muted flex items-center justify-center overflow-hidden"
-                                title={member.user?.name}
+                                title={member.user.name}
                             >
-                                {member.user?.avatar ? (
+                                {member.user.avatar ? (
                                     <img src={member.user.avatar} alt={member.user.name} className="w-full h-full object-cover" />
                                 ) : (
                                     <span className="text-xs font-medium text-muted-foreground">
-                                        {member.user?.name?.charAt(0) || '?'}
+                                        {member.user.name?.charAt(0) || '?'}
                                     </span>
                                 )}
                             </div>
-                        ))}
-                        {members.length > 4 && (
-                            <div className="w-8 h-8 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs text-muted-foreground font-medium">
-                                +{members.length - 4}
-                            </div>
-                        )}
+                        ) : null)}
                     </div>
 
                     <span className="text-xs text-muted-foreground">

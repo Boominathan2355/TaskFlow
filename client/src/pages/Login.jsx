@@ -80,6 +80,7 @@ const Login = () => {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                                 placeholder="you@example.com"
+                                autoComplete="email"
                                 className="bg-background border-border focus:ring-primary rounded-xl"
                             />
                         </div>
@@ -95,6 +96,7 @@ const Login = () => {
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                                 placeholder="••••••••"
+                                autoComplete="current-password"
                                 className="bg-background border-border focus:ring-primary rounded-xl"
                             />
                         </div>
@@ -141,7 +143,7 @@ const Login = () => {
             </div>
 
             <footer className="fixed bottom-4 text-center text-xs text-muted-foreground w-full">
-                © 2024 TaskFlow. All rights reserved.
+                © 2026 TaskFlow. All rights reserved.
             </footer>
         </div>
     );

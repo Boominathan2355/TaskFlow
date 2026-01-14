@@ -1,7 +1,7 @@
 const Chat = require('../models/Chat');
 const User = require('../models/User');
 
-// Create or fetch 1:1 chat
+// Create or fetch 1:1 chat (supports self-chat)
 exports.accessChat = async (req, res) => {
     const { userId } = req.body;
 
@@ -9,15 +9,33 @@ exports.accessChat = async (req, res) => {
         return res.status(400).json({ error: "UserId param not sent with request" });
     }
 
-    var isChat = await Chat.find({
-        isGroupChat: false,
-        $and: [
-            { users: { $elemMatch: { $eq: req.user._id } } },
-            { users: { $elemMatch: { $eq: userId } } },
-        ],
-    })
-        .populate("users", "-password")
-        .populate("latestMessage");
+    const isSelfChat = userId === req.user._id.toString();
+
+    // Find existing chat
+    let isChat;
+    if (isSelfChat) {
+        // For self-chat, find chat marked as isSelfChat with current user
+        isChat = await Chat.find({
+            isGroupChat: false,
+            isSelfChat: true,
+            users: { $elemMatch: { $eq: req.user._id } },
+            $expr: { $eq: [{ $size: "$users" }, 1] }
+        })
+            .populate("users", "-password")
+            .populate("latestMessage");
+    } else {
+        // Normal 1:1 chat
+        isChat = await Chat.find({
+            isGroupChat: false,
+            isSelfChat: { $ne: true },
+            $and: [
+                { users: { $elemMatch: { $eq: req.user._id } } },
+                { users: { $elemMatch: { $eq: userId } } },
+            ],
+        })
+            .populate("users", "-password")
+            .populate("latestMessage");
+    }
 
     isChat = await User.populate(isChat, {
         path: "latestMessage.sender",
@@ -28,9 +46,10 @@ exports.accessChat = async (req, res) => {
         res.send(isChat[0]);
     } else {
         var chatData = {
-            chatName: "sender",
+            chatName: isSelfChat ? "Saved Messages" : "sender",
             isGroupChat: false,
-            users: [req.user._id, userId],
+            isSelfChat: isSelfChat,
+            users: isSelfChat ? [req.user._id] : [req.user._id, userId],
         };
 
         try {
@@ -40,9 +59,9 @@ exports.accessChat = async (req, res) => {
                 "-password"
             );
 
-            // Notify the other participant via socket
+            // Notify the other participant via socket (not for self-chat)
             const io = req.app.get("io");
-            if (io) {
+            if (io && !isSelfChat) {
                 const otherUser = FullChat.users.find(u => u._id.toString() !== req.user._id.toString());
                 if (otherUser) {
                     io.to(otherUser._id.toString()).emit("new_chat_received", FullChat);
@@ -195,5 +214,94 @@ exports.addToGroup = async (req, res) => {
         throw new Error("Chat Not Found");
     } else {
         res.json(added);
+    }
+};
+
+// Delete Chat
+exports.deleteChat = async (req, res) => {
+    const { chatId } = req.params;
+
+    try {
+        const chat = await Chat.findById(chatId);
+
+        if (!chat) {
+            return res.status(404).json({ error: "Chat not found" });
+        }
+
+        // Check if user is part of this chat
+        if (!chat.users.some(u => u.toString() === req.user._id.toString())) {
+            return res.status(403).json({ error: "You are not authorized to delete this chat" });
+        }
+
+        // For group chats, only admin can delete
+        if (chat.isGroupChat && chat.groupAdmin?.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: "Only group admin can delete this chat" });
+        }
+
+        // Delete all messages in the chat
+        const Message = require('../models/Message');
+        await Message.deleteMany({ chat: chatId });
+
+        // Delete the chat
+        await Chat.findByIdAndDelete(chatId);
+
+        // Notify other users via socket
+        const io = req.app.get("io");
+        if (io) {
+            chat.users.forEach(userId => {
+                io.to(userId.toString()).emit("chat_deleted", { chatId });
+            });
+        }
+
+        res.status(200).json({ message: "Chat deleted successfully", chatId });
+    } catch (error) {
+        console.error("Delete chat error:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Toggle Pin Chat
+exports.togglePinChat = async (req, res) => {
+    const { chatId } = req.params;
+
+    try {
+        const chat = await Chat.findById(chatId);
+
+        if (!chat) {
+            return res.status(404).json({ error: "Chat not found" });
+        }
+
+        // Check if user is part of this chat
+        if (!chat.users.some(u => u.toString() === req.user._id.toString())) {
+            return res.status(403).json({ error: "You are not authorized to pin this chat" });
+        }
+
+        const isPinned = chat.pinnedBy?.includes(req.user._id);
+
+        if (isPinned) {
+            // Unpin
+            await Chat.findByIdAndUpdate(chatId, {
+                $pull: { pinnedBy: req.user._id }
+            });
+        } else {
+            // Pin
+            await Chat.findByIdAndUpdate(chatId, {
+                $addToSet: { pinnedBy: req.user._id }
+            });
+        }
+
+        const updatedChat = await Chat.findById(chatId)
+            .populate("users", "-password")
+            .populate("groupAdmin", "-password")
+            .populate("latestMessage");
+
+        res.status(200).json({
+            message: isPinned ? "Chat unpinned" : "Chat pinned",
+            chat: updatedChat,
+            isPinned: !isPinned
+        });
+    } catch (error) {
+        console.error("Toggle pin chat error:", error);
+        res.status(500).json({ error: error.message });
     }
 };

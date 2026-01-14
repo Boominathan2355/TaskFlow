@@ -143,7 +143,7 @@ exports.forgotPassword = async (req, res) => {
         const user = await User.findOne({ email });
 
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: 'User not found with this email' });
         }
 
         // Generate token
@@ -158,36 +158,16 @@ exports.forgotPassword = async (req, res) => {
         // Expires in 10 minutes
         user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
 
-        await user.save();
+        await user.save({ validateBeforeSave: false });
 
+        // Return the reset link directly to the user
         const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
 
-        const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
-
-        try {
-            await sendEmail({
-                email: user.email,
-                subject: 'Password Reset Request',
-                message,
-                html: `
-                    <h1>You have requested a password reset</h1>
-                    <p>Please click the link below to reset your password:</p>
-                    <a href="${resetUrl}" clicktracking=off>${resetUrl}</a>
-                    <p>If you did not make this request, please ignore the email.</p>
-                `
-            });
-
-            res.status(200).json({ success: true, message: 'Email sent' });
-        } catch (err) {
-            console.error('Email send failed. Fallback to console log.');
-            console.log(`Fallback Password Reset Link: ${resetUrl}`);
-
-            // Return success with warning so user can continue flow using console link
-            return res.status(200).json({
-                success: true,
-                message: 'Email service unavailable. Check server console for reset link.'
-            });
-        }
+        res.status(200).json({
+            success: true,
+            message: 'Password reset link generated',
+            resetLink: resetUrl
+        });
 
     } catch (error) {
         console.error('Forgot password error:', error);

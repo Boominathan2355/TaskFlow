@@ -137,7 +137,7 @@ const GroupChatModal = ({ isOpen, onClose }) => {
                                 <div className="spinner w-8 h-8 border-2 border-t-primary"></div>
                             </div>
                         ) : (
-                            searchResult?.slice(0, 4).map((user) => (
+                            searchResult?.map((user) => (
                                 <button
                                     key={user._id}
                                     onClick={() => handleGroup(user)}

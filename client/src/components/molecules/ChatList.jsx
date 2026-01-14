@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, UserPlus, Users, MessageSquare } from 'lucide-react';
+import { Search, UserPlus, Users, MessageSquare, Trash2, Pin } from 'lucide-react';
 import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
@@ -7,7 +7,7 @@ import { config } from '../../config';
 import GroupChatModal from './GroupChatModal';
 
 const ChatList = () => {
-    const { chats, selectedChat, setSelectedChat, loading, fetchChats, onlineUsers, notification } = useChat();
+    const { chats, selectedChat, setSelectedChat, loading, fetchChats, onlineUsers, notification, deleteChat, togglePinChat } = useChat();
     const { user: currentUser } = useAuth();
     const [search, setSearch] = useState("");
     const [searchResult, setSearchResult] = useState([]);
@@ -49,7 +49,9 @@ const ChatList = () => {
     };
 
     const getSender = (users) => {
-        return users[0]._id === currentUser._id ? users[1] : users[0];
+        if (!users || users.length === 0) return null;
+        if (users.length === 1) return users[0];
+        return users[0]?._id === currentUser._id ? users[1] : users[0];
     };
 
     return (
@@ -120,15 +122,30 @@ const ChatList = () => {
                                 <div className="spinner w-8 h-8 border-2 border-t-primary"></div>
                             </div>
                         ) : chats.length > 0 ? (
-                            chats.map((chat) => {
-                                const sender = !chat.isGroupChat ? getSender(chat.users) : null;
+                            [...chats].sort((a, b) => {
+                                // Helper to detect self-chat (works for old chats without isSelfChat flag)
+                                const isSelfChat = (chat) => chat.isSelfChat || (!chat.isGroupChat && chat.users?.length === 1 && chat.users[0]?._id === currentUser._id);
+                                // Self-chat always first
+                                if (isSelfChat(a) && !isSelfChat(b)) return -1;
+                                if (!isSelfChat(a) && isSelfChat(b)) return 1;
+                                // Then pinned chats
+                                const aIsPinned = a.pinnedBy?.includes(currentUser._id);
+                                const bIsPinned = b.pinnedBy?.includes(currentUser._id);
+                                if (aIsPinned && !bIsPinned) return -1;
+                                if (!aIsPinned && bIsPinned) return 1;
+                                return 0;
+                            }).map((chat) => {
+                                const sender = !chat.isGroupChat && chat.users && chat.users.length > 0 ? getSender(chat.users) : null;
                                 const isSelected = selectedChat?._id === chat._id;
+                                const isPinned = chat.pinnedBy?.includes(currentUser._id);
+                                // Detect self-chat
+                                const isSelfChat = chat.isSelfChat || (!chat.isGroupChat && chat.users?.length === 1 && chat.users[0]?._id === currentUser._id);
 
                                 return (
-                                    <button
+                                    <div
                                         key={chat._id}
                                         onClick={() => setSelectedChat(chat)}
-                                        className={`w-full flex items-center gap-4 p-4 rounded-3xl transition-all duration-300 text-left relative group ${isSelected
+                                        className={`w-full flex items-center gap-4 p-4 rounded-3xl transition-all duration-300 text-left relative group cursor-pointer ${isSelected
                                             ? 'bg-primary shadow-xl shadow-primary/20 scale-[1.02] text-primary-foreground'
                                             : 'hover:bg-accent/10 active:scale-[0.98]'
                                             }`}
@@ -138,18 +155,24 @@ const ChatList = () => {
                                                 }`}>
                                                 {chat.isGroupChat ? (
                                                     <Users size={24} className={isSelected ? 'text-primary' : ''} />
+                                                ) : sender ? (
+                                                    sender.avatar ? <img src={sender.avatar} alt={sender.name} className="w-full h-full object-cover" /> : sender.name?.charAt(0) || 'U'
                                                 ) : (
-                                                    sender.avatar ? <img src={sender.avatar} alt={sender.name} className="w-full h-full object-cover" /> : sender.name.charAt(0)
+                                                    'U'
                                                 )}
                                             </div>
-                                            {!chat.isGroupChat && onlineUsers.includes(sender._id) && (
+                                            {!chat.isGroupChat && sender && onlineUsers.includes(sender._id) && (
                                                 <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-online border-2 rounded-full shadow-sm ${isSelected ? 'border-primary' : 'border-background'}`} />
                                             )}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-baseline mb-0.5">
                                                 <p className={`font-bold text-sm truncate ${isSelected ? 'text-primary-foreground' : 'text-foreground'}`}>
-                                                    {chat.isGroupChat ? chat.chatName : sender.name}
+                                                    {isSelfChat
+                                                        ? `${currentUser?.name} (You)`
+                                                        : chat.isGroupChat
+                                                            ? chat.chatName
+                                                            : sender?.name || 'Unknown User'}
                                                 </p>
                                                 {chat.latestMessage && (
                                                     <div className="flex flex-col items-end gap-1">
@@ -180,7 +203,43 @@ const ChatList = () => {
                                                 )}
                                             </div>
                                         </div>
-                                    </button>
+                                        {/* Action Buttons */}
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                            {/* Pin Button */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    togglePinChat(chat._id);
+                                                }}
+                                                className={`p-2 rounded-xl transition-all ${isPinned
+                                                    ? (isSelected ? 'text-primary-foreground bg-white/20' : 'text-primary bg-primary/10')
+                                                    : (isSelected ? 'text-primary-foreground hover:bg-white/10' : 'text-muted-foreground hover:bg-secondary')
+                                                    }`}
+                                                title={isPinned ? "Unpin chat" : "Pin chat"}
+                                            >
+                                                <Pin size={16} className={isPinned ? 'fill-current' : ''} />
+                                            </button>
+                                            {/* Delete Button */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm('Are you sure you want to delete this chat? All messages will be lost.')) {
+                                                        deleteChat(chat._id);
+                                                    }
+                                                }}
+                                                className={`p-2 rounded-xl transition-all hover:bg-destructive/20 ${isSelected ? 'text-primary-foreground hover:text-primary-foreground' : 'text-muted-foreground hover:text-destructive'}`}
+                                                title="Delete chat"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                        {/* Pin Indicator */}
+                                        {isPinned && (
+                                            <div className={`absolute top-2 left-2 p-1 rounded-lg ${isSelected ? 'bg-white/20 text-primary-foreground' : 'bg-primary/10 text-primary'}`}>
+                                                <Pin size={10} className="fill-current" />
+                                            </div>
+                                        )}
+                                    </div>
                                 );
                             })
                         ) : (

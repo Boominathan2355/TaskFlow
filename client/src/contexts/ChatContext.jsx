@@ -89,7 +89,7 @@ export const ChatProvider = ({ children }) => {
                         return [...prev, newMessageReceived];
                     });
                 } else {
-                    // Otherwise, add to notifications and refreshing chat list
+                    // Otherwise, add to notifications
                     setNotification(prev => {
                         if (prev.find(n => n._id === newMessageReceived._id)) return prev;
                         return [newMessageReceived, ...prev];
@@ -97,7 +97,20 @@ export const ChatProvider = ({ children }) => {
                     showNativeNotification(newMessageReceived);
                     soundManager.playNotification();
                 }
-                fetchChats(); // Refresh chat list for latest message preview
+
+                // OPTIMIZED: Update chat list locally instead of fetching all chats
+                setChats(prevChats => {
+                    const updatedChats = prevChats.map(chat => {
+                        if (chat._id === newMessageReceived.chat._id) {
+                            return { ...chat, latestMessage: newMessageReceived };
+                        }
+                        return chat;
+                    });
+
+                    // Optional: Move updated chat to top (simple sort)
+                    // For now, just updating the latestMessage property is enough to refresh the preview
+                    return updatedChats;
+                });
             });
 
             socket.on("user_status", ({ userId, status }) => {
@@ -195,6 +208,47 @@ export const ChatProvider = ({ children }) => {
         }
     };
 
+    const deleteChat = async (chatId) => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.delete(`/api/chat/${chatId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            // Remove from local state
+            setChats(prev => prev.filter(c => c._id !== chatId));
+
+            // Clear selected chat if it was the deleted one
+            if (selectedChat?._id === chatId) {
+                setSelectedChat(null);
+            }
+
+            return true;
+        } catch (error) {
+            console.error("Error deleting chat", error);
+            return false;
+        }
+    };
+
+    const togglePinChat = async (chatId) => {
+        try {
+            const token = localStorage.getItem('token');
+            const { data } = await axios.put(`/api/chat/${chatId}/pin`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            // Update the chat in local state
+            setChats(prev => prev.map(c =>
+                c._id === chatId ? { ...c, pinnedBy: data.chat.pinnedBy } : c
+            ));
+
+            return data.isPinned;
+        } catch (error) {
+            console.error("Error toggling pin chat", error);
+            return null;
+        }
+    };
+
     const toggleChatHub = () => setIsChatHubOpen(!isChatHubOpen);
 
     return (
@@ -213,6 +267,8 @@ export const ChatProvider = ({ children }) => {
             fetchChats,
             fetchMessages,
             sendMessage,
+            deleteChat,
+            togglePinChat,
             loading,
             loadingMessages,
             onlineUsers

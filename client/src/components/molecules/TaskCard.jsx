@@ -110,7 +110,7 @@ const TaskCard = ({ task, onClick }) => {
                     </div>
 
                     <div className="flex -space-x-2">
-                        {task.assignedTo?.slice(0, 3).map((user) => (
+                        {task.assignedTo?.map((user) => (
                             <Avatar
                                 key={user._id}
                                 src={user.avatar}
@@ -120,11 +120,6 @@ const TaskCard = ({ task, onClick }) => {
                                 className="w-6 h-6 border-2 border-card ring-0"
                             />
                         ))}
-                        {task.assignedTo?.length > 3 && (
-                            <div className="w-6 h-6 rounded-full bg-muted border-2 border-card flex items-center justify-center text-[10px] text-muted-foreground font-medium">
-                                +{task.assignedTo.length - 3}
-                            </div>
-                        )}
                         {(!task.assignedTo || task.assignedTo.length === 0) && (
                             <div className="w-6 h-6 rounded-full border border-dashed border-border flex items-center justify-center text-muted-foreground/50">
                                 <span className="sr-only">Unassigned</span>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Input from '../components/atoms/Input';
 import Button from '../components/atoms/Button';
@@ -10,17 +10,23 @@ const ForgotPassword = () => {
     const [email, setEmail] = useState('');
     const [status, setStatus] = useState('idle'); // idle, loading, success, error
     const [message, setMessage] = useState('');
+    const [resetLink, setResetLink] = useState('');
     const { isDark, toggleTheme } = useTheme();
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setStatus('loading');
         setMessage('');
+        setResetLink('');
 
         try {
             const { data } = await axios.post('/api/auth/forgot-password', { email });
             setStatus('success');
             setMessage(data.message);
+            if (data.resetLink) {
+                setResetLink(data.resetLink);
+            }
         } catch (error) {
             setStatus('error');
             setMessage(error.response?.data?.error || 'Something went wrong. Please try again.');
@@ -52,7 +58,7 @@ const ForgotPassword = () => {
                     </div>
                     <h2 className="text-2xl font-bold tracking-tight text-foreground">Forgot Password?</h2>
                     <p className="text-sm text-muted-foreground">
-                        No worries, we'll send you reset instructions.
+                        Enter your email to get a password reset link.
                     </p>
                 </div>
 
@@ -63,12 +69,17 @@ const ForgotPassword = () => {
                             <p className="font-medium text-sm">
                                 {message}
                             </p>
-                            <p className="text-xs opacity-90">
-                                (Check the server console for the link)
-                            </p>
                         </div>
+                        {resetLink && (
+                            <Button
+                                className="w-full bg-primary text-primary-foreground rounded-xl py-5 shadow-lg"
+                                onClick={() => navigate(resetLink.replace('http://localhost:5173', ''))}
+                            >
+                                Reset Your Password
+                            </Button>
+                        )}
                         <Link to="/login">
-                            <Button className="w-full" variant="outline">
+                            <Button className="w-full mt-2" variant="outline">
                                 Back to Login
                             </Button>
                         </Link>
@@ -93,6 +104,7 @@ const ForgotPassword = () => {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                                 placeholder="Enter your email"
+                                autoComplete="email"
                                 className="bg-background border-border focus:ring-primary rounded-xl"
                                 disabled={status === 'loading'}
                             />
@@ -122,7 +134,7 @@ const ForgotPassword = () => {
             </div>
 
             <footer className="fixed bottom-4 text-center text-xs text-muted-foreground w-full">
-                © 2024 TaskFlow. All rights reserved.
+                © 2026 TaskFlow. All rights reserved.
             </footer>
         </div>
     );

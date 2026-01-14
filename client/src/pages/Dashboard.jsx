@@ -266,7 +266,9 @@ const ChatSearchSection = ({ chatSearchQuery, setChatSearchQuery, navigate }) =>
     const { user: currentUser } = useAuth();
 
     const getSender = (users) => {
-        return users[0]._id === currentUser._id ? users[1] : users[0];
+        if (!users || users.length === 0) return null;
+        if (users.length === 1) return users[0];
+        return users[0]?._id === currentUser._id ? users[1] : users[0];
     };
 
     const filteredChats = chats.filter(chat => {
@@ -324,7 +326,7 @@ const ChatSearchSection = ({ chatSearchQuery, setChatSearchQuery, navigate }) =>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredChats.map((chat) => {
-                        const sender = !chat.isGroupChat ? getSender(chat.users) : null;
+                        const sender = !chat.isGroupChat && chat.users && chat.users.length > 0 ? getSender(chat.users) : null;
 
                         return (
                             <button
@@ -336,13 +338,15 @@ const ChatSearchSection = ({ chatSearchQuery, setChatSearchQuery, navigate }) =>
                                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                                         {chat.isGroupChat ? (
                                             <Users size={24} />
+                                        ) : sender ? (
+                                            sender?.avatar ? <img src={sender.avatar} className="w-full h-full rounded-xl object-cover" alt={sender.name} /> : sender?.name?.charAt(0) || 'U'
                                         ) : (
-                                            sender?.avatar ? <img src={sender.avatar} className="w-full h-full rounded-xl object-cover" alt={sender.name} /> : sender?.name?.charAt(0)
+                                            'U'
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-bold truncate group-hover:text-primary transition-colors">
-                                            {chat.isGroupChat ? chat.chatName : sender?.name}
+                                            {chat.isGroupChat ? chat.chatName : sender?.name || 'Unknown User'}
                                         </h3>
                                         {chat.isGroupChat && (
                                             <p className="text-xs text-muted-foreground">
