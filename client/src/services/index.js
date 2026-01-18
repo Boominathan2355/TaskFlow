@@ -20,7 +20,7 @@ export const userAPI = {
 
 // Project APIs
 export const projectAPI = {
-    getAllProjects: () => api.get('/projects'),
+    getAllProjects: (config) => api.get('/projects', config),
     getProjectById: (id) => api.get(`/projects/${id}`),
     createProject: (data) => api.post('/projects', data),
     updateProject: (id, data) => api.put(`/projects/${id}`, data),
@@ -35,7 +35,7 @@ export const projectAPI = {
 
 // Task APIs
 export const taskAPI = {
-    getMyTasks: () => api.get('/tasks/my-tasks'),
+    getMyTasks: (config) => api.get('/tasks/my-tasks', config),
     getProjectTasks: (projectId) => api.get(`/tasks/project/${projectId}`),
     getTaskById: (id) => api.get(`/tasks/${id}`),
     createTask: (data) => api.post('/tasks', data),
@@ -52,8 +52,8 @@ export const taskAPI = {
 
 // Notification APIs
 export const notificationAPI = {
-    getNotifications: () => api.get('/notifications'),
-    getUnreadCount: () => api.get('/notifications/unread/count'),
+    getNotifications: (config) => api.get('/notifications', config),
+    getUnreadCount: (config) => api.get('/notifications/unread/count', config),
     markAsRead: (id) => api.put(`/notifications/${id}/read`),
     markAllAsRead: () => api.put('/notifications/read-all'),
     deleteNotification: (id) => api.delete(`/notifications/${id}`),

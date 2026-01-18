@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { Bell } from 'lucide-react';
+import axios from 'axios';
 
 const NotificationDropdown = () => {
     const [notifications, setNotifications] = useState([]);
@@ -15,7 +16,9 @@ const NotificationDropdown = () => {
 
     useEffect(() => {
         if (user) {
-            fetchNotifications();
+            const controller = new AbortController();
+            fetchNotifications(controller.signal);
+            return () => controller.abort();
         }
     }, [user]);
 
@@ -48,18 +51,19 @@ const NotificationDropdown = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = React.useCallback(async (signal) => {
         try {
             const [listRes, countRes] = await Promise.all([
-                notificationAPI.getNotifications(),
-                notificationAPI.getUnreadCount()
+                notificationAPI.getNotifications({ signal }),
+                notificationAPI.getUnreadCount({ signal })
             ]);
             setNotifications(listRes.data.notifications);
             setUnreadCount(countRes.data.unreadCount || 0);
         } catch (error) {
+            if (axios.isCancel(error) || error.name === 'CanceledError') return;
             console.error('Failed to fetch notifications', error);
         }
-    };
+    }, []);
 
     const handleMarkAsRead = async (id) => {
         try {

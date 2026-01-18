@@ -30,7 +30,9 @@ const ChatWindow = () => {
 
     useEffect(() => {
         if (selectedChat) {
-            fetchMessages(selectedChat._id);
+            const controller = new AbortController();
+            fetchMessages(selectedChat._id, controller.signal);
+            return () => controller.abort();
         }
     }, [selectedChat, fetchMessages]);
 

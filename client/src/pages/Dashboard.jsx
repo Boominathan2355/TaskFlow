@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import Button from '../components/atoms/Button';
 import Input from '../components/atoms/Input';
+import axios from 'axios';
 import Badge from '../components/atoms/Badge';
 import { Plus, Search, CheckCircle2, Clock, AlertCircle, User, Layout, ListTodo, Calendar, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
@@ -26,7 +27,9 @@ const Dashboard = () => {
     const socket = useSocket();
 
     useEffect(() => {
-        fetchData();
+        const controller = new AbortController();
+        fetchData(controller.signal);
+        return () => controller.abort();
     }, []);
 
     useEffect(() => {
@@ -41,21 +44,26 @@ const Dashboard = () => {
         }
     }, [socket]);
 
-    const fetchData = async () => {
+    const fetchData = React.useCallback(async (signal) => {
         try {
             setLoading(true);
             const [projectsRes, tasksRes] = await Promise.all([
-                projectAPI.getAllProjects(),
-                taskAPI.getMyTasks()
+                projectAPI.getAllProjects({ signal }),
+                taskAPI.getMyTasks({ signal })
             ]);
             setProjects(projectsRes.data.projects);
             setMyTasks(tasksRes.data.tasks);
         } catch (error) {
+            if (axios.isCancel(error) || error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+                return;
+            }
             console.error('Error fetching dashboard data:', error);
         } finally {
-            setLoading(false);
+            if (!signal?.aborted) {
+                setLoading(false);
+            }
         }
-    };
+    }, []);
 
     const handleCreateProject = async (projectData) => {
         try {

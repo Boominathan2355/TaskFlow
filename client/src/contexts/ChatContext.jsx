@@ -33,12 +33,13 @@ export const ChatProvider = ({ children }) => {
     const socket = useSocket();
     const navigate = useNavigate();
 
-    const fetchChats = useCallback(async () => {
+    const fetchChats = useCallback(async (signal) => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
             const { data } = await axios.get(`${config.API_URL}/api/chat`, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
+                signal: signal instanceof AbortSignal ? signal : undefined
             });
             // Remove duplicates based on _id
             const uniqueChats = data.filter((chat, index, self) =>
@@ -47,23 +48,26 @@ export const ChatProvider = ({ children }) => {
             setChats(uniqueChats);
             setLoading(false);
         } catch (error) {
+            if (axios.isCancel(error)) return;
             console.error("Error fetching chats", error);
             setLoading(false);
         }
     }, []);
 
-    const fetchMessages = useCallback(async (chatId) => {
+    const fetchMessages = useCallback(async (chatId, signal) => {
         if (!chatId) return;
         try {
             setLoadingMessages(true);
             const token = localStorage.getItem('token');
             const { data } = await axios.get(`${config.API_URL}/api/message/${chatId}`, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
+                signal: signal instanceof AbortSignal ? signal : undefined
             });
             setMessages(data);
             setLoadingMessages(false);
             socket?.emit("join_chat", chatId);
         } catch (error) {
+            if (axios.isCancel(error)) return;
             console.error("Error fetching messages", error);
             setLoadingMessages(false);
         }
@@ -71,7 +75,9 @@ export const ChatProvider = ({ children }) => {
 
     useEffect(() => {
         if (user) {
-            fetchChats();
+            const controller = new AbortController();
+            fetchChats(controller.signal);
+            return () => controller.abort();
         }
     }, [user, fetchChats]);
 
