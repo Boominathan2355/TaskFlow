@@ -21,10 +21,6 @@ const ProjectView = () => {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('board');
-    // Create Task Modal State
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [createStage, setCreateStage] = useState('Backlog');
-
     // Settings Modal State
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -41,6 +37,12 @@ const ProjectView = () => {
         project?.owner?._id === user?._id ||
         project?.members?.some(m => (m.user === user?._id || m.user?._id === user?._id) && m.role === 'Admin') ||
         user?.role === 'Admin';
+
+    const projectMemberRole = project?.members?.find(m =>
+            m.user === user?._id || m.user?._id === user?._id
+        )?.role;
+    const isViewer = user?.role === 'Viewer' || projectMemberRole === 'Viewer';
+    const canEdit = !isViewer;
 
     useEffect(() => {
         const fetchProjectData = async () => {
@@ -123,10 +125,6 @@ const ProjectView = () => {
     const openCreatePage = (stage) => {
         const stageParam = stage ? `?stage=${encodeURIComponent(stage)}` : '';
         navigate(`/projects/${id}/create-task${stageParam}`);
-    };
-
-    const handleTaskUpdate = (updatedTask) => {
-        setTasks(tasks.map(t => t._id === updatedTask._id ? updatedTask : t));
     };
 
     const filteredTasks = tasks.filter(task => {
@@ -271,9 +269,10 @@ const ProjectView = () => {
                         <KanbanBoard
                             tasks={filteredTasks}
                             stages={project.workflowStages}
-                            onTaskMove={handleTaskMove}
+                            onTaskMove={canEdit ? handleTaskMove : undefined}
                             onTaskClick={handleTaskClick}
-                            onAddTask={openCreatePage}
+                            onAddTask={canEdit ? openCreatePage : undefined}
+                            canEdit={canEdit}
                         />
                     </TabsContent>
 

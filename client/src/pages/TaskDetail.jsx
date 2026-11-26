@@ -109,33 +109,41 @@ const TaskDetail = () => {
     const API_URL = appConfig.API_URL;
 
     // Markdown components config
+    const cleanMarkdownProps = (props) => {
+        const cleanProps = { ...props };
+        delete cleanProps.node;
+        delete cleanProps.children;
+        delete cleanProps.inline;
+        return cleanProps;
+    };
+
     const markdownComponents = {
-        img: ({ node, ...props }) => <img {...props} className="max-w-full rounded-md shadow-sm my-2" />,
-        p: ({ node, children, ...props }) => (
-            <p {...props} className="mb-2 last:mb-0">
-                {React.Children.map(children, child =>
+        img: (props) => <img {...cleanMarkdownProps(props)} className="max-w-full rounded-md shadow-sm my-2" />,
+        p: (props) => (
+            <p {...cleanMarkdownProps(props)} className="mb-2 last:mb-0">
+                {React.Children.map(props.children, child =>
                     typeof child === 'string' ? highlightMentions(child) : child
                 )}
             </p>
         ),
-        li: ({ node, children, ...props }) => (
-            <li {...props}>
-                {React.Children.map(children, child =>
+        li: (props) => (
+            <li {...cleanMarkdownProps(props)}>
+                {React.Children.map(props.children, child =>
                     typeof child === 'string' ? highlightMentions(child) : child
                 )}
             </li>
         ),
-        ul: ({ node, ...props }) => <ul {...props} className="list-disc ml-4 mb-2" />,
-        ol: ({ node, ...props }) => <ol {...props} className="list-decimal ml-4 mb-2" />,
-        a: ({ node, ...props }) => <a {...props} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer" />,
-        h1: ({ node, ...props }) => <h1 {...props} className="text-xl font-bold mt-4 mb-2" />,
-        h2: ({ node, ...props }) => <h2 {...props} className="text-lg font-bold mt-3 mb-2" />,
-        h3: ({ node, ...props }) => <h3 {...props} className="text-md font-bold mt-2 mb-1" />,
-        blockquote: ({ node, ...props }) => <blockquote {...props} className="border-l-4 border-muted pl-4 italic my-2" />,
-        code: ({ node, inline, ...props }) =>
-            inline
-                ? <code {...props} className="bg-muted px-1 py-0.5 rounded text-sm font-mono" />
-                : <code {...props} className="block bg-muted/50 p-3 rounded-md text-sm font-mono my-2 overflow-x-auto" />
+        ul: (props) => <ul {...cleanMarkdownProps(props)} className="list-disc ml-4 mb-2" />,
+        ol: (props) => <ol {...cleanMarkdownProps(props)} className="list-decimal ml-4 mb-2" />,
+        a: (props) => <a {...cleanMarkdownProps(props)} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer" />,
+        h1: (props) => <h1 {...cleanMarkdownProps(props)} className="text-xl font-bold mt-4 mb-2" />,
+        h2: (props) => <h2 {...cleanMarkdownProps(props)} className="text-lg font-bold mt-3 mb-2" />,
+        h3: (props) => <h3 {...cleanMarkdownProps(props)} className="text-md font-bold mt-2 mb-1" />,
+        blockquote: (props) => <blockquote {...cleanMarkdownProps(props)} className="border-l-4 border-muted pl-4 italic my-2" />,
+        code: (props) =>
+            props.inline
+                ? <code {...cleanMarkdownProps(props)} className="bg-muted px-1 py-0.5 rounded text-sm font-mono" />
+                : <code {...cleanMarkdownProps(props)} className="block bg-muted/50 p-3 rounded-md text-sm font-mono my-2 overflow-x-auto" />
     };
 
     useEffect(() => {
@@ -167,7 +175,7 @@ const TaskDetail = () => {
             socket.emit('join_project', projectId);
 
             const handleTaskUpdate = (data) => {
-                if (data.task && (data.task._id === task?._id || data.task._id === taskId)) {
+                if (data.task && data.task._id === taskId) {
                     setTask(data.task);
                 }
             };
@@ -176,7 +184,7 @@ const TaskDetail = () => {
 
             socket.on('task_action_received', (data) => {
                 console.log('Received task action:', data);
-                if (data.action && (data.taskId === task?._id || data.taskId === taskId)) {
+                if (data.action && data.taskId === taskId) {
                     setActionNotification(`${data.user.name} just ${data.action} this task`);
                     setTimeout(() => setActionNotification(null), 5000);
                 }
@@ -426,8 +434,11 @@ const TaskDetail = () => {
     const isProjectAdmin = project?.members?.some(m =>
         (m.user === user?._id || m.user?._id === user?._id) && m.role === 'Admin'
     );
-    const canDelete = isProjectOwner || isProjectAdmin || user?.role === 'Admin';
-    const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.stage !== 'Done';
+    const projectMemberRole = project?.members?.find(m =>
+        m.user === user?._id || m.user?._id === user?._id
+    )?.role;
+    const isViewer = user?.role === 'Viewer' || projectMemberRole === 'Viewer';
+    const canDelete = !isViewer && (isProjectOwner || isProjectAdmin || user?.role === 'Admin');
 
     return (
         <div className="min-h-screen bg-background">

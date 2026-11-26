@@ -12,7 +12,7 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import KanbanColumn from './KanbanColumn';
 import TaskCard from '../molecules/TaskCard';
 
-const KanbanBoard = ({ tasks, stages, onTaskMove, onTaskClick, onAddTask }) => {
+const KanbanBoard = ({ tasks, stages, onTaskMove, onTaskClick, onAddTask, canEdit = true }) => {
     const [activeTask, setActiveTask] = useState(null);
 
     const sensors = useSensors(
@@ -33,6 +33,11 @@ const KanbanBoard = ({ tasks, stages, onTaskMove, onTaskClick, onAddTask }) => {
     };
 
     const handleDragEnd = (event) => {
+        if (!canEdit) {
+            setActiveTask(null);
+            return;
+        }
+
         const { active, over } = event;
 
         // Clear drag overlay
@@ -75,6 +80,7 @@ const KanbanBoard = ({ tasks, stages, onTaskMove, onTaskClick, onAddTask }) => {
                         tasks={tasks.filter(task => task.stage === stage)}
                         onTaskClick={onTaskClick}
                         onAddTask={onAddTask}
+                        canEdit={canEdit}
                     />
                 ))}
             </div>

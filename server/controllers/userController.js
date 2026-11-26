@@ -187,6 +187,10 @@ exports.createUser = async (req, res) => {
             return res.status(400).json({ error: 'User with this email already exists' });
         }
 
+        if (role && !['Admin', 'Member', 'Viewer'].includes(role)) {
+            return res.status(400).json({ error: 'Invalid role' });
+        }
+
         const user = new User({
             name,
             email,

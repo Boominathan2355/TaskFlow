@@ -1,16 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const projectController = require('../controllers/projectController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, isAdmin } = require('../middleware/auth');
 
 // All project routes require authentication
 router.use(authenticate);
 
 // Get all projects for specific user (Admin only)
-router.get('/assignments/user/:userId', projectController.getUserProjects);
+router.get('/assignments/user/:userId', isAdmin, projectController.getUserProjects);
 
 // Update project assignments for user (Admin only)
-router.put('/assignments/user/:userId', projectController.updateUserProjects);
+router.put('/assignments/user/:userId', isAdmin, projectController.updateUserProjects);
 
 // Get all projects for current user
 router.get('/', projectController.getAllProjects);

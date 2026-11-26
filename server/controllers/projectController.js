@@ -60,10 +60,16 @@ exports.getProjectById = async (req, res) => {
             return res.status(404).json({ error: 'Project not found' });
         }
 
-        // All authenticated users can view active projects
-        if (project.status !== 'Active' &&
-            project.owner._id.toString() !== req.user._id.toString() &&
-            !project.members.some(m => m.user._id.toString() === req.user._id.toString())) {
+        // Restrict access to project owners, project members, and system admins
+        const isOwner = project.owner._id.toString() === req.user._id.toString();
+        const isMember = project.members.some(m => m.user._id.toString() === req.user._id.toString());
+        const isGlobalAdmin = req.user.role === 'Admin';
+
+        if (!isOwner && !isMember && !isGlobalAdmin) {
+            return res.status(403).json({ error: 'Access denied. You are not a member of this project.' });
+        }
+
+        if (project.status !== 'Active' && !isOwner && !isGlobalAdmin) {
             return res.status(403).json({ error: 'Access denied. This project is not active.' });
         }
 
@@ -77,6 +83,10 @@ exports.getProjectById = async (req, res) => {
 // Create new project
 exports.createProject = async (req, res) => {
     try {
+        if (req.user.role === 'Viewer') {
+            return res.status(403).json({ error: 'Access denied. Viewers cannot create projects.' });
+        }
+
         const { title, description, color, workflowStages } = req.body;
 
         if (!title) {
@@ -222,8 +232,13 @@ exports.addProjectMember = async (req, res) => {
             m => m.user.toString() === req.user._id.toString() && m.role === 'Admin'
         );
 
-        if (!isOwner && !adminMember) {
+        const isGlobalAdmin = req.user.role === 'Admin';
+        if (!isOwner && !adminMember && !isGlobalAdmin) {
             return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+        }
+
+        if (!['Admin', 'Member', 'Viewer'].includes(role || 'Member')) {
+            return res.status(400).json({ error: 'Invalid project role.' });
         }
 
         // Check if user is already a member
@@ -273,9 +288,12 @@ exports.removeProjectMember = async (req, res) => {
 
         // Check if requester has admin access
         const isOwner = project.owner.toString() === req.user._id.toString();
+        const adminMember = project.members.find(
+            m => m.user.toString() === req.user._id.toString() && m.role === 'Admin'
+        );
 
-        if (!isOwner && req.user.role !== 'Admin') {
-            return res.status(403).json({ error: 'Access denied. Only owner can remove members.' });
+        if (!isOwner && !adminMember && req.user.role !== 'Admin') {
+            return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
         }
 
         // Can't remove owner

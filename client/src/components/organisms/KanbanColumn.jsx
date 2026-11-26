@@ -29,7 +29,7 @@ const STAGE_STYLES = {
     },
 };
 
-const KanbanColumn = ({ stage, tasks, onTaskClick, onAddTask }) => {
+const KanbanColumn = ({ stage, tasks, onTaskClick, onAddTask, canEdit = true }) => {
     const { setNodeRef, isOver } = useDroppable({
         id: stage,
     });
@@ -60,7 +60,7 @@ const KanbanColumn = ({ stage, tasks, onTaskClick, onAddTask }) => {
                             {tasks.length}
                         </span>
                     </div>
-                    {stage === 'Backlog' && (
+                    {stage === 'Backlog' && canEdit && (
                         <Button
                             size="icon"
                             variant="ghost"
@@ -74,7 +74,7 @@ const KanbanColumn = ({ stage, tasks, onTaskClick, onAddTask }) => {
 
                 {/* Tasks Container */}
                 <div className="flex-1 p-3 space-y-3 overflow-y-auto">
-                    {stage === 'Backlog' && (
+                    {stage === 'Backlog' && canEdit && (
                         <button
                             onClick={() => onAddTask(stage)}
                             className="w-full flex flex-col items-center justify-center py-6 gap-2 rounded-xl border-2 border-dashed border-black/5 dark:border-white/5 bg-background/40 hover:bg-background/80 hover:border-primary/30 transition-all group"

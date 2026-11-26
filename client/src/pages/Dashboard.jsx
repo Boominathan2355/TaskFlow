@@ -5,27 +5,21 @@ import Button from '../components/atoms/Button';
 import Input from '../components/atoms/Input';
 import axios from 'axios';
 import Badge from '../components/atoms/Badge';
-import { Plus, Search, CheckCircle2, Clock, AlertCircle, User, Layout, ListTodo, Calendar, ExternalLink } from 'lucide-react';
+import { Plus, Search, CheckCircle2, Layout, ListTodo, Calendar, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import WelcomeBanner from '../components/molecules/WelcomeBanner';
 import ProjectCard from '../components/molecules/ProjectCard';
 import CreateProjectModal from '../components/organisms/CreateProjectModal';
 
 const Dashboard = () => {
     const { user } = useAuth();
+    const canCreateProject = user?.role !== 'Viewer';
     const navigate = useNavigate();
     const [projects, setProjects] = useState([]);
     const [myTasks, setMyTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
-
-    useEffect(() => {
-        const controller = new AbortController();
-        fetchData(controller.signal);
-        return () => controller.abort();
-    }, []);
 
     const fetchData = React.useCallback(async (signal) => {
         try {
@@ -47,6 +41,12 @@ const Dashboard = () => {
             }
         }
     }, []);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        fetchData(controller.signal);
+        return () => controller.abort();
+    }, [fetchData]);
 
     const handleCreateProject = async (projectData) => {
         try {
@@ -88,8 +88,6 @@ const Dashboard = () => {
 
     return (
         <div className="space-y-10 w-full pb-12">
-            <WelcomeBanner />
-
             {/* My Tasks Section */}
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -199,10 +197,6 @@ const Dashboard = () => {
                             Manage and track your team's projects
                         </p>
                     </div>
-                    <Button onClick={() => setIsModalOpen(true)} className="shadow-lg shadow-primary/20">
-                        <Plus className="w-4 h-4 mr-2" />
-                        New Project
-                    </Button>
                 </div>
 
                 <div className="relative max-w-md">
@@ -224,7 +218,7 @@ const Dashboard = () => {
                         <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
                             {searchQuery ? `We couldn't find any projects matching "${searchQuery}"` : 'Get started by creating your first project for your team.'}
                         </p>
-                        {!searchQuery && (
+                        {!searchQuery && canCreateProject && (
                             <Button onClick={() => setIsModalOpen(true)}>Create Project</Button>
                         )}
                     </div>

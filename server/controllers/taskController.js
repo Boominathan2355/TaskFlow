@@ -4,6 +4,26 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
 
+// Reusable server-side project role checks
+const getProjectMemberRole = (project, userId) => {
+    const member = project.members?.find(m => m.user.toString() === userId.toString());
+    return member?.role || null;
+};
+
+const canAccessProject = (project, user) =>
+    user.role === 'Admin' ||
+    project.owner.toString() === user._id.toString() ||
+    project.members?.some(m => m.user.toString() === user._id.toString());
+
+const canModifyProject = (project, user) => {
+    if (user.role === 'Admin') return true;
+    if (project.owner.toString() === user._id.toString()) return true;
+    return getProjectMemberRole(project, user._id) === 'Admin';
+};
+
+const isProjectViewer = (project, user) =>
+    user.role === 'Viewer' || getProjectMemberRole(project, user._id) === 'Viewer';
+
 // Helper to get task query (by Ticket ID)
 const getTaskQuery = async (id) => {
     // Since _id is now the ticket ID, we just return it directly
@@ -64,11 +84,14 @@ exports.getProjectTasks = async (req, res) => {
             return res.status(404).json({ error: 'Project not found' });
         }
 
-        // All authenticated users can view tasks of active projects
+        if (!canAccessProject(project, req.user)) {
+            return res.status(403).json({ error: 'Access denied. You are not a member of this project.' });
+        }
+
         if (project.status !== 'Active' &&
             project.owner.toString() !== req.user._id.toString() &&
-            !project.members.some(m => m.user.toString() === req.user._id.toString())) {
-            return res.status(403).json({ error: 'Access denied' });
+            req.user.role !== 'Admin') {
+            return res.status(403).json({ error: 'Access denied. This project is not active.' });
         }
 
         const tasks = await Task.find({ project: projectId })
@@ -122,10 +145,14 @@ exports.getTaskById = async (req, res) => {
 
         // All authenticated users can view tasks of active projects
         const project = await Project.findById(task.project._id);
+        if (!canAccessProject(project, req.user)) {
+            return res.status(403).json({ error: 'Access denied. You are not a member of this project.' });
+        }
+
         if (project.status !== 'Active' &&
             project.owner.toString() !== req.user._id.toString() &&
-            !project.members.some(m => m.user.toString() === req.user._id.toString())) {
-            return res.status(403).json({ error: 'Access denied' });
+            req.user.role !== 'Admin') {
+            return res.status(403).json({ error: 'Access denied. This project is not active.' });
         }
 
         res.json({ task });
@@ -145,35 +172,18 @@ exports.createTask = async (req, res) => {
         }
 
         // Check if user has access to project and update task counter atomically
-        const project = await Project.findByIdAndUpdate(
-            projectId,
-            { $inc: { taskCounter: 1 } },
-            { new: true }
-        );
+        const project = await Project.findById(projectId);
 
         if (!project) {
             return res.status(404).json({ error: 'Project not found' });
         }
 
-        const isProjectOwner = project.owner.toString() === req.user._id.toString();
-        const isProjectMember = project.members.some(m => m.user.toString() === req.user._id.toString());
-        const isGlobalAdmin = req.user.role === 'Admin';
-        const hasAccess = isProjectOwner || isProjectMember || isGlobalAdmin;
-
-        // Debug logging
-        console.log('=== CREATE TASK ACCESS CHECK ===');
-        console.log('User ID:', req.user._id.toString());
-        console.log('User Role:', req.user.role);
-        console.log('Project Owner:', project.owner.toString());
-        console.log('Is Project Owner:', isProjectOwner);
-        console.log('Is Project Member:', isProjectMember);
-        console.log('Is Global Admin:', isGlobalAdmin);
-        console.log('Has Access:', hasAccess);
-        console.log('================================');
-
-        if (!hasAccess || req.user.role === 'Viewer') {
-            return res.status(403).json({ error: 'Access denied. You do not have permission to create tasks in this project.' });
+        if (!canAccessProject(project, req.user) || isProjectViewer(project, req.user)) {
+            return res.status(403).json({ error: 'Access denied. Viewers cannot create tasks in this project.' });
         }
+
+        project.taskCounter = (project.taskCounter || 0) + 1;
+        await project.save();
 
         // Generate task key (e.g., P-001)
         const taskNumber = project.taskCounter.toString().padStart(3, '0');
@@ -262,7 +272,7 @@ exports.updateTask = async (req, res) => {
         const isGlobalAdmin = req.user.role === 'Admin';
         const hasAccess = isProjectOwner || isProjectMember || isGlobalAdmin;
 
-        if (!hasAccess || req.user.role === 'Viewer') {
+        if (!hasAccess || isProjectViewer(project, req.user)) {
             return res.status(403).json({ error: 'Access denied. Viewers cannot update tasks.' });
         }
 
@@ -376,6 +386,10 @@ exports.deleteTask = async (req, res) => {
         const isTaskCreator = task.createdBy.toString() === req.user._id.toString();
         const isGlobalAdmin = req.user.role === 'Admin';
 
+        if (isProjectViewer(project, req.user)) {
+            return res.status(403).json({ error: 'Access denied. Viewers cannot delete tasks.' });
+        }
+
         if (!isProjectOwner && !isProjectAdmin && !isTaskCreator && !isGlobalAdmin) {
             return res.status(403).json({ error: 'Access denied. You do not have permission to delete this task.' });
         }
@@ -420,6 +434,11 @@ exports.addComment = async (req, res) => {
 
         if (!task) {
             return res.status(404).json({ error: 'Task not found' });
+        }
+
+        const project = await Project.findById(task.project);
+        if (!canAccessProject(project, req.user) || isProjectViewer(project, req.user)) {
+            return res.status(403).json({ error: 'Access denied. Viewers cannot add comments.' });
         }
 
         const comment = {
@@ -567,6 +586,11 @@ exports.addAttachment = async (req, res) => {
             return res.status(404).json({ error: 'Task not found' });
         }
 
+        const project = await Project.findById(task.project);
+        if (!canAccessProject(project, req.user) || isProjectViewer(project, req.user)) {
+            return res.status(403).json({ error: 'Access denied. Viewers have read-only access.' });
+        }
+
         const attachment = {
             filename,
             url,
@@ -609,6 +633,11 @@ exports.toggleVote = async (req, res) => {
 
         if (!task) {
             return res.status(404).json({ error: 'Task not found' });
+        }
+
+        const project = await Project.findById(task.project);
+        if (!canAccessProject(project, req.user) || isProjectViewer(project, req.user)) {
+            return res.status(403).json({ error: 'Access denied. Viewers have read-only access.' });
         }
 
         const voteIndex = task.votes.indexOf(req.user._id);
@@ -659,6 +688,11 @@ exports.toggleWatch = async (req, res) => {
 
         if (!task) {
             return res.status(404).json({ error: 'Task not found' });
+        }
+
+        const project = await Project.findById(task.project);
+        if (!canAccessProject(project, req.user) || isProjectViewer(project, req.user)) {
+            return res.status(403).json({ error: 'Access denied. Viewers have read-only access.' });
         }
 
         const watchIndex = task.watchers.indexOf(req.user._id);
