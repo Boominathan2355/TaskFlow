@@ -22,10 +22,10 @@ const Layout = () => {
     return (
         <div className="min-h-screen bg-background text-foreground flex flex-col">
             <Header />
-            <main className={`flex-1 w-full flex flex-col ${window.location.pathname.includes('/chat') ? 'px-0 py-0' : 'px-6 py-8'}`}>
+            <main className="flex-1 w-full flex flex-col px-6 py-8">
                 <Outlet />
             </main>
-            {!window.location.pathname.includes('/chat') && <Footer />}
+            <Footer />
         </div>
     );
 };

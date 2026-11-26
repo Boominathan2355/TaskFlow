@@ -167,10 +167,6 @@
       radial-gradient(at 100% 100%, hsla(var(--primary), 0.03) 0, transparent 50%);
   }
 
-  .chat-bubble-me {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
-  }
-
   .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
     height: 4px;

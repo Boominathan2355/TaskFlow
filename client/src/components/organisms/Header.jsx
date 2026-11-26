@@ -1,22 +1,18 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { taskAPI } from '../../services';
-import { Search, Loader2, FileText, ChevronRight, MessageSquare, Users } from 'lucide-react';
+import { Search, Loader2, FileText, ChevronRight } from 'lucide-react';
 import NotificationDropdown from '../molecules/NotificationDropdown';
-import { useChat } from '../../contexts/ChatContext';
 
 const Header = () => {
-    const { notification, chats, setSelectedChat } = useChat();
     const { user, logout } = useAuth();
     const { isDark, toggleTheme } = useTheme();
     const navigate = useNavigate();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
-    const [chatResults, setChatResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showSearchResults, setShowSearchResults] = useState(false);
     const searchRef = useRef(null);
@@ -49,18 +45,6 @@ const Header = () => {
             try {
                 const { data } = await taskAPI.searchTasks(val);
                 setSearchResults(data.tasks || []);
-
-                // Search chats
-                const searchLower = val.toLowerCase();
-                const filtered = chats?.filter(chat => {
-                    if (chat.isGroupChat) {
-                        return chat.chatName?.toLowerCase().includes(searchLower);
-                    } else {
-                        const sender = chat.users?.find(u => u._id !== user._id);
-                        return sender?.name?.toLowerCase().includes(searchLower);
-                    }
-                }) || [];
-                setChatResults(filtered);
             } catch (err) {
                 console.error('Search error:', err);
             } finally {
@@ -94,20 +78,6 @@ const Header = () => {
                     <nav className="hidden md:flex items-center gap-4 border-l pl-8 ml-2 h-8 border-border">
                         <NavLink to="/" className={({ isActive }) => `text-sm font-medium transition-colors hover:text-primary ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
                             Dashboard
-                        </NavLink>
-                        <NavLink to="/chat" className={({ isActive }) => `relative flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-                            <MessageSquare size={16} />
-                            <span className="flex items-center gap-1.5">
-                                Chat
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border bg-warning/10 text-warning border-warning/20">
-                                    BETA
-                                </span>
-                            </span>
-                            {notification.length > 0 && (
-                                <span className="absolute -top-1 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-sm animate-pulse">
-                                    {notification.length}
-                                </span>
-                            )}
                         </NavLink>
                     </nav>
 
@@ -177,60 +147,8 @@ const Header = () => {
                                                 </div>
                                             )}
 
-                                            {/* Chat Results Section */}
-                                            {chatResults.length > 0 && (
-                                                <div>
-                                                    <div className="p-2 border-b border-border bg-muted/30">
-                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-2">Chats</p>
-                                                    </div>
-                                                    {chatResults.map((chat) => {
-                                                        const sender = !chat.isGroupChat ? chat.users?.find(u => u._id !== user._id) : null;
-                                                        return (
-                                                            <button
-                                                                key={chat._id}
-                                                                onClick={() => {
-                                                                    setSelectedChat(chat);
-                                                                    navigate('/chat');
-                                                                    setShowSearchResults(false);
-                                                                    setSearchQuery('');
-                                                                }}
-                                                                className="w-full flex items-start gap-3 p-3 hover:bg-muted/50 transition-colors text-left group border-b border-border/50 last:border-0"
-                                                            >
-                                                                <div className="mt-1 h-8 w-8 rounded-full overflow-hidden flex items-center justify-center shrink-0 border-2 border-border group-hover:border-primary transition-all">
-                                                                    {chat.isGroupChat ? (
-                                                                        <div className="w-full h-full bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                                                                            <Users className="h-4 w-4" />
-                                                                        </div>
-                                                                    ) : sender?.avatar ? (
-                                                                        <img
-                                                                            src={sender.avatar}
-                                                                            alt={sender.name}
-                                                                            className="w-full h-full object-cover"
-                                                                        />
-                                                                    ) : (
-                                                                        <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                                                                            {sender?.name?.charAt(0)?.toUpperCase()}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                                                                        {chat.isGroupChat ? chat.chatName : sender?.name}
-                                                                    </p>
-                                                                    {chat.isGroupChat && (
-                                                                        <p className="text-[10px] text-muted-foreground">
-                                                                            {chat.users?.length} members
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-
                                             {/* No Results */}
-                                            {searchResults.length === 0 && chatResults.length === 0 && (
+                                            {searchResults.length === 0 && (
                                                 <div className="p-8 text-center">
                                                     <Search className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
                                                     <p className="text-sm text-muted-foreground font-medium italic">No results found for "{searchQuery}"</p>
@@ -239,7 +157,7 @@ const Header = () => {
                                         </>
                                     )}
                                 </div>
-                                {(searchResults.length > 0 || chatResults.length > 0) && !isSearching && (
+                                {searchResults.length > 0 && !isSearching && (
                                     <div className="p-2 border-t border-border bg-muted/20">
                                         <p className="text-[10px] text-center text-muted-foreground font-medium italic">Showing top results</p>
                                     </div>
